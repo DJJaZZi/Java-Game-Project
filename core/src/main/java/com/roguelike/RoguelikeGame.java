@@ -4,15 +4,12 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.roguelike.core.game.GameManager;
-import com.roguelike.core.game.GameState;
-import com.roguelike.input.InputHandler;
-import com.roguelike.input.PlayerController;
 import com.roguelike.rendering.GameRenderer;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class RoguelikeGame extends ApplicationAdapter {
+public class RoguelikeGame extends Game {
     private GameManager gameManager;
-    private GameRenderer gameRenderer;
+    private GameRenderer renderer;
     private InputHandler inputHandler;
     private PlayerController playerController;
 
