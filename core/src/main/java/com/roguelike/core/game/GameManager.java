@@ -348,7 +348,7 @@ public class GameManager implements CombatListener, CollisionListener {
         }
     }
 
-    // ==================== Getters and Setters ====================
+    // ==================== Getters ====================
 
     public GameState getGameState() { return gameState; }
     public DungeonLevel getCurrentLevel() { return currentLevel; }
@@ -365,11 +365,4 @@ public class GameManager implements CombatListener, CollisionListener {
     public AISystem getAISystem() { return aiSystem; }
     public CombatSystem getCombatSystem() { return combatSystem; }
     public CollisionSystem getCollisionSystem() { return collisionSystem; }
-}
-
-/**
- * GameStateListener interface
- */
-public interface GameStateListener {
-    void onStateChanged(GameState oldState, GameState newState);
 }
