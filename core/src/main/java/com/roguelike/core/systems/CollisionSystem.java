@@ -85,7 +85,3 @@ public class CollisionSystem {
 // CollisionListener interface - for Observer Pattern
 // Implement this to react to collision events
 
-interface CollisionListener {
-    // Called when player collides with enemy
-    void onPlayerEnemyCollision(Player player, Enemy enemy);
-}

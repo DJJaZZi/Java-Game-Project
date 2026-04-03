@@ -260,6 +260,3 @@ public class GameManager {
     }
 }
 
-interface GameStateListener {
-    void onStateChanged(GameState oldState, GameState newState);
-}
