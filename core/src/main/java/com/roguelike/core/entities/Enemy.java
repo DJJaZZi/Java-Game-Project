@@ -1,6 +1,7 @@
 package com.roguelike.core.entities;
 
 import com.roguelike.core.ai.AIStrategy;
+import com.roguelike.core.dungeon.DungeonLevel;
 
 /**
  * Enemy class - extends Entity with AI
@@ -121,7 +122,7 @@ public class Enemy extends Entity {
     /**
      * Make a decision using current AI
      */
-    public int[] getNextMove(com.roguelike.core.entities.Player player, com.roguelike.core.dungeon.DungeonLevel level) {
+    public int[] getNextMove(com.roguelike.core.entities.Player player, DungeonLevel level) {
         if (aiStrategy != null) {
             return aiStrategy.decideNextMove(this, player, level);
         }
@@ -131,7 +132,7 @@ public class Enemy extends Entity {
     /**
      * Execute AI behavior
      */
-    public void executeAI(com.roguelike.core.entities.Player player, com.roguelike.core.dungeon.DungeonLevel level, float deltaTime) {
+    public void executeAI(com.roguelike.core.entities.Player player, DungeonLevel level, float deltaTime) {
         if (aiStrategy != null && isAlive) {
             aiStrategy.execute(this, player, level, deltaTime);
         }

@@ -6,7 +6,7 @@ import com.roguelike.core.entities.Player;
 /**
  * SmartAI - Uses pathfinding to chase player
  */
-class SmartAI implements AIStrategy {
+public class SmartAI implements AIStrategy {
     private static final int DETECTION_RANGE = 15;
     private static final int ATTACK_RANGE = 1;
     private static final int PATHFINDING_UPDATE_RATE = 0;

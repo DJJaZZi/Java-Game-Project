@@ -1,8 +1,9 @@
 package com.roguelike.core.systems;
 
+import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Player;
-import com.roguelike.core.dungeon.DungeonLevel;
+
 import java.util.List;
 
 

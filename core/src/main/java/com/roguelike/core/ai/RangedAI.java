@@ -6,7 +6,7 @@ import com.roguelike.core.entities.Player;
 /**
  * RangedAI - Keeps distance and attacks from range
  */
-class RangedAI implements AIStrategy {
+public class RangedAI implements AIStrategy {
     private static final int ATTACK_RANGE = 5;
     private static final int SAFE_DISTANCE = 3;
     private static final int DETECTION_RANGE = 12;

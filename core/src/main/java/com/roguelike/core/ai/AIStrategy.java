@@ -2,7 +2,6 @@ package com.roguelike.core.ai;
 
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Player;
-import com.roguelike.core.dungeon.DungeonLevel;
 
 /**
  * AIStrategy interface - Strategy Pattern

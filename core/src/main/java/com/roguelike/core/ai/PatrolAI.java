@@ -6,7 +6,7 @@ import com.roguelike.core.entities.Player;
 /**
  * PatrolAI - Patrols fixed path
  */
-class PatrolAI implements AIStrategy {
+public class PatrolAI implements AIStrategy {
     private int[] patrolPath;
     private int currentWaypoint = 0;
     private float pathWaitTime = 0;

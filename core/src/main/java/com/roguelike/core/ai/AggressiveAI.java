@@ -1,12 +1,13 @@
 package com.roguelike.core.ai;
 
+import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Player;
 
 /**
  * AggressiveAI - Chases and attacks player
  */
-class AggressiveAI implements AIStrategy {
+public class AggressiveAI implements AIStrategy {
     private static final int DETECTION_RANGE = 10;
     private static final int ATTACK_RANGE = 1;
 
