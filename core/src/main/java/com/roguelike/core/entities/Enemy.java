@@ -18,6 +18,7 @@ public class Enemy extends Entity {
     private int goldReward;
     private String enemyType;
     private int level;
+    private DungeonLevel dungeonLevel;
 
     /**
      * Constructor for Enemy
@@ -157,6 +158,14 @@ public class Enemy extends Entity {
     }
 
     // ==================== Getters ====================
+
+    public DungeonLevel getDungeonLevel() {
+        return dungeonLevel;
+    }
+
+    public void setDungeonLevel(DungeonLevel dungeonLevel) {
+        this.dungeonLevel = dungeonLevel;
+    }
 
     public String getEnemyType() {
         return enemyType;

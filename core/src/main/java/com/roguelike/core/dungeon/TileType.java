@@ -7,5 +7,6 @@ public enum TileType {
     WALL,      // Cannot pass through, solid
     FLOOR,     // Can walk on
     DOOR,      // Door between rooms
+    TRAP,      // Trap
     CHEST      // Contains treasure
 }
