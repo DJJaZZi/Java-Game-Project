@@ -36,16 +36,15 @@ public class GameRenderer {
      * Main render method called each frame
      */
     public void render(GameManager gameManager) {
-        // Update camera
         updateCamera(gameManager);
 
         // Clear screen
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Render game world
-        batch.setProjectionMatrix(camera.combined);
-        batch.begin();
+        // Tell the ShapeRenderer to align with the camera and begin drawing filled shapes
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
         // Render dungeon
         if (gameManager.getCurrentLevel() != null) {
@@ -53,7 +52,9 @@ public class GameRenderer {
             renderEntities(gameManager);
         }
 
-        batch.end();
+        // End the ShapeRenderer
+        shapeRenderer.end();
+        // -----------------------
 
         // Render UI (on top, fixed screen space)
         batch.setProjectionMatrix(getUIProjectionMatrix());
