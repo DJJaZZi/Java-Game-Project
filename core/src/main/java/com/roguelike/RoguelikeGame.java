@@ -4,6 +4,8 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.roguelike.core.game.GameManager;
+import com.roguelike.input.InputHandler;
+import com.roguelike.input.PlayerController;
 import com.roguelike.rendering.GameRenderer;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */

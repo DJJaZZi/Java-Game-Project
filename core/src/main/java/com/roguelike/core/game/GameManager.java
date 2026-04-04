@@ -9,7 +9,7 @@ import com.roguelike.core.systems.CombatSystem;
 import com.roguelike.core.systems.CombatListener;
 import com.roguelike.core.systems.CollisionListener;
 import com.roguelike.core.systems.AISystem;
-import com.roguelike.core.input.PlayerAction;
+import com.roguelike.input.PlayerAction;
 import java.util.ArrayList;
 import java.util.List;
 
