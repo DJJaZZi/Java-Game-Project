@@ -149,24 +149,12 @@ public class CombatSystem {
      */
     private void onDefenderDeath(com.roguelike.core.entities.Entity attacker,
                                  com.roguelike.core.entities.Entity defender) {
-        if (debugMode) {
-            System.out.println("[CombatSystem] " + defender.getName() + " has been defeated!");
-        }
+        System.out.println("[CombatSystem] " + defender.getName() + " defeated!");
 
-        // Notify listeners
         for (CombatListener listener : listeners) {
             listener.onDefenderDeath(attacker, defender);
         }
-
-        // Handle special logic if attacker is player
-        if (attacker instanceof Player && defender instanceof Enemy) {
-            Player player = (Player) attacker;
-            Enemy enemy = (Enemy) defender;
-
-            // Give rewards to player
-            player.gainExperience(enemy.getExperienceReward());
-            player.addGold(enemy.getGoldReward());
-        }
+        // Removed: reward logic. GameManager listener handles this now.
     }
 
     /**
