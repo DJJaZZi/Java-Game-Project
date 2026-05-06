@@ -65,6 +65,10 @@ public class PlayingState implements GameState {
                 break;
             default:
                 break;
+            case INVENTORY:
+                // Future: transition to inventory screen state
+                System.out.println("[PlayingState] Inventory opened");
+                break;
         }
     }
 
