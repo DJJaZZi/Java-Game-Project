@@ -9,12 +9,12 @@ public class PlayerController {
     private static final long MOVE_DELAY = 150;
 
     public PlayerController(GameManager gameManager) {
-        this.moveUp    = new MoveCommand(gameManager,  0,  1);
-        this.moveDown  = new MoveCommand(gameManager,  0, -1);
-        this.moveLeft  = new MoveCommand(gameManager, -1,  0);
-        this.moveRight = new MoveCommand(gameManager,  1,  0);
-        this.attack    = new AttackCommand(gameManager);
-        this.useItem   = new UseItemCommand(gameManager);
+        this.moveUp    = () -> gameManager.handleInput(PlayerAction.MOVE_UP);
+        this.moveDown  = () -> gameManager.handleInput(PlayerAction.MOVE_DOWN);
+        this.moveLeft  = () -> gameManager.handleInput(PlayerAction.MOVE_LEFT);
+        this.moveRight = () -> gameManager.handleInput(PlayerAction.MOVE_RIGHT);
+        this.attack    = () -> gameManager.handleInput(PlayerAction.ATTACK);
+        this.useItem   = () -> gameManager.handleInput(PlayerAction.USE_ITEM);
     }
 
     public void openInventory() {
