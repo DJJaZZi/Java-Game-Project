@@ -117,18 +117,8 @@ public abstract class Entity {
      * Take damage
      */
     public void takeDamage(float damage) {
-        // Apply defense reduction
-        float actualDamage = Math.max(1, damage - defense);
-        health -= actualDamage;
-
-        System.out.println("[Entity] " + name + " took " + actualDamage + " damage! Health: " + health + "/" + maxHealth);
-
-        if (health <= 0) {
-            health = 0;
-            isAlive = false;
-            state = EntityState.DEAD;
-            System.out.println("[Entity] " + name + " died!");
-        }
+        health -= damage; // raw damage only — CombatSystem already accounted for defense
+        if (health <= 0) { health = 0; isAlive = false; state = EntityState.DEAD; }
     }
 
     /**

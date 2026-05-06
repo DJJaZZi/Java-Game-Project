@@ -4,6 +4,8 @@ import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Player;
 
+import java.util.List;
+
 /**
  * SmartAI - Uses pathfinding to chase player
  */
@@ -38,24 +40,11 @@ public class SmartAI implements AIStrategy {
 
     @Override
     public int[] decideNextMove(Enemy enemy, Player player, DungeonLevel level) {
-        if (enemy == null || player == null || level == null) {
-            return new int[]{0, 0};
+        List<int[]> path = level.findPath(enemy.getX(), enemy.getY(), player.getX(), player.getY());
+        if (!path.isEmpty()) {
+            int[] next = path.get(0);
+            return new int[]{next[0] - enemy.getX(), next[1] - enemy.getY()};
         }
-
-        int dx = Integer.compare(player.getX(), enemy.getX());
-        int dy = Integer.compare(player.getY(), enemy.getY());
-
-        if (level.isWalkable(enemy.getX() + dx, enemy.getY() + dy)) {
-            return new int[]{dx, dy};
-        }
-
-        if (dx != 0 && level.isWalkable(enemy.getX() + dx, enemy.getY())) {
-            return new int[]{dx, 0};
-        }
-        if (dy != 0 && level.isWalkable(enemy.getX(), enemy.getY() + dy)) {
-            return new int[]{0, dy};
-        }
-
         return new int[]{0, 0};
     }
 

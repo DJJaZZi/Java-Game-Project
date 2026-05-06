@@ -66,16 +66,11 @@ public class GameManager implements CombatListener, CollisionListener {
     }
 
     public void generateNewLevel() {
-        System.out.println("[GameManager] Generating floor " + currentFloor + "...");
         this.currentLevel = dungeonGenerator.generate(currentFloor);
-        this.levelCompleted = false;
-
-        if (currentLevel != null && player != null) {
-            // Fix: give each enemy a reference to the level
-            for (Enemy enemy : currentLevel.getEnemies()) {
-                enemy.setDungeonLevel(currentLevel);
-            }
-            currentLevel.placeEntity(player, player.getX(), player.getY());
+        if (currentLevel != null && player != null && !currentLevel.getRooms().isEmpty()) {
+            int[] spawnPos = currentLevel.getRooms().get(0).getCenter();
+            player.setPosition(spawnPos[0], spawnPos[1]);
+            currentLevel.placeEntity(player, spawnPos[0], spawnPos[1]);
         }
     }
 

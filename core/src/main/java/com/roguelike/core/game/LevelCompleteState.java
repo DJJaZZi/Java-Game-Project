@@ -14,8 +14,10 @@ public class LevelCompleteState implements GameState {
 
     @Override
     public void handleInput(GameManager gm, PlayerAction action) {
-        // Any key advances to the next level
-        gm.nextLevel();
+        if (action == PlayerAction.ATTACK || action == PlayerAction.MOVE_UP
+            || action == PlayerAction.MOVE_DOWN /* etc */) {
+            gm.nextLevel();
+        }
     }
 
     @Override
