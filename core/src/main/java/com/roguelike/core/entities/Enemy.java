@@ -91,16 +91,9 @@ public class Enemy extends Entity {
     }
 
     @Override
-    public void update(float deltaTime) {
-        if (!isAlive) {
-            return;
-        }
-
-        // Update movement
-        updateMovement(deltaTime);
-        // Update attack cooldown
-        updateAttack(deltaTime);
-        // AI executes decision each frame
+    protected void onUpdate(float deltaTime) {
+        // Enemy-specific logic can go here (e.g. rage mode at low HP)
+        // AI execution is handled by AISystem, not here
     }
 
     /**
