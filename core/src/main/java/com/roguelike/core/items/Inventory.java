@@ -1,7 +1,8 @@
 package com.roguelike.core.items;
 
 /**
- * Inventory - Manages items (Composite Pattern)
+ * Inventory - manages the player's carried items.
+ * Simple collection wrapper with helper methods for use, drop, and selection.
  */
 public class Inventory {
     private java.util.List<Item> items;
