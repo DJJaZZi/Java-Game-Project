@@ -54,9 +54,22 @@ public abstract class Entity {
     }
 
     /**
-     * Update entity each frame - override in subclasses
+     * Template Method — defines the update sequence for all entities.
+     * Subclasses override onUpdate() for their specific logic only.
      */
-    public abstract void update(float deltaTime);
+    public final void update(float deltaTime) {
+        if (!isAlive) return;
+        updateMovement(deltaTime);
+        updateAttack(deltaTime);
+        onUpdate(deltaTime);
+    }
+
+    /**
+     * Hook — subclasses put their specific logic here.
+     */
+    protected void onUpdate(float deltaTime) {
+        // default: nothing extra
+    }
 
     /**
      * Move entity towards target grid position
