@@ -112,19 +112,14 @@ public class GameManager implements CombatListener, CollisionListener {
     }
 
     public void setState(GameState newState) {
-        if (currentState != null) {
-            currentState.onExit(this);
-        }
-        GameState old = currentState;
+        GameStateType oldType = currentState != null ? currentState.getType() : null;
+
+        if (currentState != null) currentState.onExit(this);
         currentState = newState;
         currentState.onEnter(this);
 
         for (GameStateListener listener : stateListeners) {
-            GameStateType oldType = old != null ? old.getType() : null;
-            listener.onStateChanged(
-                    oldType != null ? mapToLegacy(oldType) : null,
-                    mapToLegacy(newState.getType())
-            );
+            listener.onStateChanged(oldType, newState.getType());
         }
     }
 
