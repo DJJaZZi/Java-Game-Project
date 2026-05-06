@@ -58,32 +58,10 @@ public class Player extends Entity {
     }
 
     @Override
-    public void update(float deltaTime) {
-        // Update movement animation
-        updateMovement(deltaTime);
-
-        // Update attack cooldown
-        updateAttack(deltaTime);
-
-        // Regenerate mana over time
+    protected void onUpdate(float deltaTime) {
+        // Mana regeneration
         if (currentMana < maxMana) {
             currentMana = Math.min(currentMana + (int)(5 * deltaTime), maxMana);
-        }
-
-        // Handle state-specific logic
-        switch (state) {
-            case IDLE:
-                // Could add idle animation here
-                break;
-            case MOVING:
-                // Movement is handled in updateMovement()
-                break;
-            case ATTACKING:
-                // Attack animation handling
-                break;
-            case DEAD:
-                // Player death handling
-                break;
         }
     }
 
