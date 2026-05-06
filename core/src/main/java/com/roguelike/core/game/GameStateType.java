@@ -1,10 +1,9 @@
 package com.roguelike.core.game;
 
-public enum GameState {
+public enum GameStateType {
     MENU,
     PLAYING,
     PAUSE,
     GAME_OVER,
-    LEVEL_COMPLETE,
-    INVENTORY_SCREEN
+    LEVEL_COMPLETE
 }
