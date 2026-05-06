@@ -1,6 +1,7 @@
 package com.roguelike.core.entities;
 
 import com.roguelike.core.items.Inventory;
+import com.roguelike.core.items.Weapon;
 
 /**
  * Player class - extends Entity
@@ -106,8 +107,12 @@ public class Player extends Entity {
                 break;
             case WEAPON:
                 // Equip weapon
-                this.attackDamage = ((com.roguelike.core.items.Sword) item).getDamage() + strength;
-                System.out.println("[Player] Equipped weapon! New damage: " + attackDamage);
+                if (item instanceof Weapon) {
+                    Weapon weapon = (Weapon) item; // safe base class cast
+                    this.attackDamage = weapon.getDamage() + strength;
+                    System.out.println("[Player] Equipped " + weapon.getName() +
+                        "! Damage: " + attackDamage);
+                }
                 break;
             case ARMOR:
                 // Equip armor
