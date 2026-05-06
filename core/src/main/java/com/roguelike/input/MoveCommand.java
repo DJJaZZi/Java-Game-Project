@@ -14,6 +14,10 @@ public class MoveCommand implements Command {
 
     @Override
     public void execute() {
-        gameManager.handlePlayerMove(dx, dy);
+        // dx/dy need to map to the correct PlayerAction
+        if      (dx ==  1) gameManager.handleInput(PlayerAction.MOVE_RIGHT);
+        else if (dx == -1) gameManager.handleInput(PlayerAction.MOVE_LEFT);
+        else if (dy ==  1) gameManager.handleInput(PlayerAction.MOVE_UP);
+        else if (dy == -1) gameManager.handleInput(PlayerAction.MOVE_DOWN);
     }
 }
