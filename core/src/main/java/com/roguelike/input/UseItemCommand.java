@@ -11,9 +11,6 @@ public class UseItemCommand implements Command {
 
     @Override
     public void execute() {
-        if (gameManager.getPlayer() != null &&
-            gameManager.getPlayer().getInventory() != null) {
-            gameManager.getPlayer().getInventory().useCurrentItem();
-        }
+        gameManager.handleInput(PlayerAction.USE_ITEM);
     }
 }
