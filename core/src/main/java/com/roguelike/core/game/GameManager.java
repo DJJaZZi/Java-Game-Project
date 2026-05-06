@@ -253,15 +253,12 @@ public class GameManager implements CombatListener, CollisionListener {
     /**
      * Handle player movement
      */
-    private void handlePlayerMove(int dx, int dy) {
+    public void handlePlayerMove(int dx, int dy) {
         if (player == null || currentLevel == null) return;
-
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
-
         if (currentLevel.isWalkable(newX, newY)) {
             player.moveTo(newX, newY);
-            System.out.println("[GameManager] Player moved to: (" + newX + ", " + newY + ")");
         }
     }
 
