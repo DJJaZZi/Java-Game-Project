@@ -11,9 +11,7 @@ public class AttackCommand implements Command {
 
     @Override
     public void execute() {
-        gameManager.getCombatSystem().handlePlayerAttack(
-            gameManager.getPlayer(),
-            gameManager.getCurrentLevel()
-        );
+        // Routes through current state — PausedState will silently ignore it
+        gameManager.handleInput(PlayerAction.ATTACK);
     }
 }

@@ -17,6 +17,10 @@ public class PlayerController {
         this.useItem   = new UseItemCommand(gameManager);
     }
 
+    public void openInventory() {
+        gameManager.handleInput(PlayerAction.INVENTORY);
+    }
+
     public void moveUp()    { if (canMove()) { moveUp.execute();    updateTime(); } }
     public void moveDown()  { if (canMove()) { moveDown.execute();  updateTime(); } }
     public void moveLeft()  { if (canMove()) { moveLeft.execute();  updateTime(); } }
