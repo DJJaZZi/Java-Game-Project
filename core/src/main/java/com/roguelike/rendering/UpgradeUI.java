@@ -77,7 +77,7 @@ public class UpgradeUI {
 
         font.setColor(1f, 1f, 1f, 1f); // reset
         cy -= LINE_H * 0.5f;
-        font.draw(batch, stat -> "Press ESC to leave shop", x, cy);
+        font.draw(batch, "Press ESC to leave shop", x, cy);
     }
 
     public void dispose() {
