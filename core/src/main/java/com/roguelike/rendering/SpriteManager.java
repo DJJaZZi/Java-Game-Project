@@ -48,25 +48,34 @@ public class SpriteManager {
         TextureAtlas atlas = atlasFor(entityType);
         if (atlas == null) return null;
 
-        // Try exact name first, then case-insensitive prefix search
-        TextureAtlas.AtlasRegion region = atlas.findRegion(state + " 1");
-        if (region == null) region = atlas.findRegion(state + "_idle_left 1");
-        if (region == null) {
-            // Find any region whose name starts with state (case-insensitive)
-            for (TextureAtlas.AtlasRegion r : atlas.getRegions()) {
-                if (r.name.toLowerCase().startsWith(state.toLowerCase())) {
-                    region = r;
-                    break;
-                }
-            }
-        }
-        if (region == null && !atlas.getRegions().isEmpty()) {
-            region = atlas.getRegions().first(); // absolute fallback
+        TextureRegion region = null;
+
+        // Match by exact names per entity type
+        if (entityType.equals("player")) {
+            // hero atlas uses: "idle 1", "run 1", "attack 1"
+            region = atlas.findRegion(state + " 1");
+        } else if (entityType.equals("goblin")) {
+            // goblin atlas uses: "goblin_idle_left 1", "goblin_run 1", "goblin_attack 1"
+            if (state.equals("idle"))   region = atlas.findRegion("goblin_idle_left 1");
+            else if (state.equals("run"))    region = atlas.findRegion("goblin_run 1");
+            else if (state.equals("attack")) region = atlas.findRegion("goblin_attack 1");
+            else if (state.equals("dead"))   region = atlas.findRegion("goblin_death 1");
+            if (region == null) region = atlas.findRegion("goblin_idle_left 1"); // fallback
+        } else if (entityType.equals("orc")) {
+            // orc atlas uses: "Idle 1", "Run 1", "Attack 1", "Dead 1"  (capital first letter)
+            if (state.equals("idle"))   region = atlas.findRegion("Idle 1");
+            else if (state.equals("run"))    region = atlas.findRegion("Run 1");
+            else if (state.equals("attack")) region = atlas.findRegion("Attack 1");
+            else if (state.equals("dead"))   region = atlas.findRegion("Dead 1");
+            if (region == null) region = atlas.findRegion("Idle 1"); // fallback
         }
 
-        if (region != null) {
-            cache.put(key, region);
+        // Last resort: first region in atlas
+        if (region == null && !atlas.getRegions().isEmpty()) {
+            region = atlas.getRegions().first();
         }
+
+        if (region != null) cache.put(key, region);
         return region;
     }
 

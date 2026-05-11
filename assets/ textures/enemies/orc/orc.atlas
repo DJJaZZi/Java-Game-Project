@@ -1,45 +1,79 @@
 orc.png
-size:1024,128
-repeat:none
-Attack 1
-bounds:2,65,82,61
-Attack 2
-bounds:667,66,37,60
-Attack 3
-bounds:209,66,67,60
-Attack 4
-bounds:278,66,61,60
-Dead 1
-bounds:439,2,39,59
-Dead 2
-bounds:480,7,39,54
-Dead 3
-bounds:413,76,52,50
-Dead 4
-bounds:341,76,70,50
-Hurt 1
-bounds:151,65,56,61
-Hurt 2
-bounds:132,2,56,61
+
 Idle 1
-bounds:67,2,63,61
+  rotate: false
+  xy: 67, 2
+  size: 63, 61
+  orig: 63, 61
+  offset: 0, 0
+  index: -1
 Idle 2
-bounds:2,2,63,61
+  rotate: false
+  xy: 2, 2
+  size: 63, 61
+  orig: 63, 61
+  offset: 0, 0
+  index: -1
 Idle 3
-bounds:86,65,63,61
+  rotate: false
+  xy: 86, 65
+  size: 63, 61
+  orig: 63, 61
+  offset: 0, 0
+  index: -1
 Idle 4
-bounds:274,2,63,62
-Idle 5
-bounds:209,2,63,62
+  rotate: false
+  xy: 274, 2
+  size: 63, 62
+  orig: 63, 62
+  offset: 0, 0
+  index: -1
 Run 1
-bounds:339,2,48,62
+  rotate: false
+  xy: 339, 2
+  size: 48, 62
+  orig: 48, 62
+  offset: 0, 0
+  index: -1
 Run 2
-bounds:467,63,48,63
+  rotate: false
+  xy: 467, 63
+  size: 48, 63
+  orig: 48, 63
+  offset: 0, 0
+  index: -1
 Run 3
-bounds:567,62,48,64
-Run 4
-bounds:517,63,48,63
-Run 5
-bounds:617,62,48,64
-Run 6
-bounds:389,9,48,65
+  rotate: false
+  xy: 567, 62
+  size: 48, 64
+  orig: 48, 64
+  offset: 0, 0
+  index: -1
+Attack 1
+  rotate: false
+  xy: 2, 65
+  size: 82, 61
+  orig: 82, 61
+  offset: 0, 0
+  index: -1
+Attack 2
+  rotate: false
+  xy: 667, 66
+  size: 37, 60
+  orig: 37, 60
+  offset: 0, 0
+  index: -1
+Dead 1
+  rotate: false
+  xy: 439, 2
+  size: 39, 59
+  orig: 39, 59
+  offset: 0, 0
+  index: -1
+Dead 2
+  rotate: false
+  xy: 480, 7
+  size: 39, 54
+  orig: 39, 54
+  offset: 0, 0
+  index: -1
