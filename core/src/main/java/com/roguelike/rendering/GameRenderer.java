@@ -149,38 +149,35 @@ public class GameRenderer {
         shapeRenderer.rect(x * tileSize, y * tileSize, tileSize, tileSize);
     }
 
-    /**
-     * Draw a sprite for an entity, centered on its tile.
-     */
     private void renderEntitySprite(com.roguelike.core.entities.Entity entity,
                                     String type, String state) {
         TextureRegion frame = spriteManager.getFrame(type, state);
+
         if (frame == null) {
-            // Fallback: draw a colored rectangle so it's always visible
-            batch.end();
+            // Absolute fallback — colored square so entity is always visible
+            shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
-            if (type.equals("player")) shapeRenderer.setColor(0.2f, 0.5f, 1f, 1);
-            else if (type.equals("goblin")) shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1);
-            else shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1);
+            if (type.equals("player"))      shapeRenderer.setColor(0.2f, 0.5f, 1f, 1f);
+            else if (type.equals("goblin")) shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1f);
+            else                            shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1f);
             shapeRenderer.rect(entity.getX() * tileSize, entity.getY() * tileSize, tileSize, tileSize);
             shapeRenderer.end();
-            batch.begin();
             return;
         }
 
         float worldX = entity.getX() * tileSize;
         float worldY = entity.getY() * tileSize;
 
-        // Scale sprite to fit tile (keep aspect ratio, center it)
+        // Scale to fit inside one tile, centered
         float spriteW = frame.getRegionWidth();
         float spriteH = frame.getRegionHeight();
         float scale   = tileSize / Math.max(spriteW, spriteH);
         float drawW   = spriteW * scale;
         float drawH   = spriteH * scale;
-        float offsetX = (tileSize - drawW) / 2f;
-        float offsetY = (tileSize - drawH) / 2f;
+        float offX    = (tileSize - drawW) / 2f;
+        float offY    = (tileSize - drawH) / 2f;
 
-        batch.draw(frame, worldX + offsetX, worldY + offsetY, drawW, drawH);
+        batch.draw(frame, worldX + offX, worldY + offY, drawW, drawH);
     }
 
     /**
