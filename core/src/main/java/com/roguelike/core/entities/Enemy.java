@@ -19,6 +19,7 @@ public class Enemy extends Entity {
     private String enemyType;
     private int level;
     private DungeonLevel dungeonLevel;
+    protected int xpReward = 20;
 
     /**
      * Constructor for Enemy
@@ -33,6 +34,10 @@ public class Enemy extends Entity {
         configureByType(enemyType);
 
         System.out.println("[Enemy] Spawned " + enemyType + " at (" + x + ", " + y + ") with AI: " + aiStrategy.getAIName());
+    }
+
+    public int getXpReward() {
+        return xpReward;
     }
 
     /**

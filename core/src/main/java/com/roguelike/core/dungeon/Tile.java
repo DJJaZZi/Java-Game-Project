@@ -20,12 +20,17 @@ public class Tile {
      * Check if this tile can be walked on
      */
     public boolean isWalkable() {
-        return type == TileType.FLOOR && occupant == null;
+        // A floor tile is walkable even if occupied — combat handles the occupant case
+        return type == TileType.FLOOR || type == TileType.DOOR;
     }
 
-    /**
-     * Check if this tile blocks vision
-     */
+    public boolean isPassable() {
+        // True only if walkable AND no occupant blocking the path
+        return isWalkable() && occupant == null;
+    }
+        /**
+         * Check if this tile blocks vision
+         */
     public boolean blocksVision() {
         return type == TileType.WALL;
     }

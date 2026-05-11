@@ -2,6 +2,8 @@ package com.roguelike.core.game;
 
 import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.dungeon.DungeonGenerator;
+import com.roguelike.core.dungeon.Tile;
+import com.roguelike.core.entities.Entity;
 import com.roguelike.core.entities.Player;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.systems.CollisionSystem;
@@ -67,10 +69,28 @@ public class GameManager implements CombatListener, CollisionListener {
 
     public void generateNewLevel() {
         this.currentLevel = dungeonGenerator.generate(currentFloor);
+        this.levelCompleted = false;
+
         if (currentLevel != null && player != null && !currentLevel.getRooms().isEmpty()) {
             int[] spawnPos = currentLevel.getRooms().get(0).getCenter();
-            player.setPosition(spawnPos[0], spawnPos[1]);
-            currentLevel.placeEntity(player, spawnPos[0], spawnPos[1]);
+
+            // Find a free tile near center
+            int spawnX = spawnPos[0];
+            int spawnY = spawnPos[1];
+
+            // Force-place player: clear any occupant first, then place
+            Tile spawnTile = currentLevel.getTile(spawnX, spawnY);
+            if (spawnTile != null && spawnTile.isWalkable()) {
+                spawnTile.setOccupant(null); // clear just in case
+                player.setPosition(spawnX, spawnY);
+                spawnTile.setOccupant(player);
+                System.out.println("[GameManager] Player spawned at (" + spawnX + "," + spawnY + ")");
+            }
+
+            // Give enemies their dungeon reference for AI
+            for (Enemy enemy : currentLevel.getEnemies()) {
+                enemy.setDungeonLevel(currentLevel);
+            }
         }
     }
 
@@ -129,10 +149,35 @@ public class GameManager implements CombatListener, CollisionListener {
 
     public void handlePlayerMove(int dx, int dy) {
         if (player == null || currentLevel == null) return;
+
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
-        if (currentLevel.isWalkable(newX, newY)) {
-            player.moveTo(newX, newY);
+
+        // Check bounds first
+        if (!currentLevel.isFloor(newX, newY)) return;
+
+        // Check if there's an enemy on the target tile — if so, ATTACK instead of move
+        Entity occupant = currentLevel.getOccupantAt(newX, newY);
+        if (occupant instanceof Enemy) {
+            Enemy enemy = (Enemy) occupant;
+            if (enemy.isAlive()) {
+                combatSystem.attack(player, enemy);
+                checkDefenderDeath(enemy);
+                return; // Don't move into the enemy's tile
+            }
+        }
+
+        // Tile is free — move the player (updates both entity coords AND tile grid)
+        currentLevel.moveEntity(player, newX, newY);
+    }
+
+    private void checkDefenderDeath(Enemy enemy) {
+        if (!enemy.isAlive()) {
+            Tile tile = currentLevel.getTile(enemy.getX(), enemy.getY());
+            if (tile != null) tile.clearOccupant();
+            player.gainExperience(enemy.getXpReward());
+            score += enemy.getXpReward() * 10;
+            System.out.println("[GameManager] " + enemy.getName() + " defeated! +" + enemy.getXpReward() + " XP");
         }
     }
 

@@ -53,13 +53,21 @@ public class DungeonLevel {
      * Check if a position is walkable
      */
     public boolean isWalkable(int x, int y) {
-        // Bounds check
-        if (x < 0 || x >= tilesWide || y < 0 || y >= tilesHigh) {
-            return false;
-        }
+        if (x < 0 || x >= tilesWide || y < 0 || y >= tilesHigh) return false;
+        Tile tile = tiles[x][y];
+        return tile != null && tile.isPassable();
+    }
 
+    // Add this new method for combat checks:
+    public boolean isFloor(int x, int y) {
+        if (x < 0 || x >= tilesWide || y < 0 || y >= tilesHigh) return false;
         Tile tile = tiles[x][y];
         return tile != null && tile.isWalkable();
+    }
+
+    public Entity getOccupantAt(int x, int y) {
+        Tile tile = getTile(x, y);
+        return tile != null ? tile.occupant : null;
     }
 
     /**
@@ -108,19 +116,19 @@ public class DungeonLevel {
      * Move entity from one position to another
      */
     public void moveEntity(Entity entity, int newX, int newY) {
-        // Check bounds and walkable
-        if (!isWalkable(newX, newY)) {
-            return;
-        }
+        if (!isFloor(newX, newY)) return;   // bounds + floor check (not passable — we already checked)
+        if (!isWalkable(newX, newY)) return; // occupant check
 
-        // Remove from old position
+        // Clear old tile
         Tile oldTile = getTile(entity.getX(), entity.getY());
-        if (oldTile != null) {
-            oldTile.clearOccupant();
-        }
+        if (oldTile != null) oldTile.clearOccupant();
 
-        // Place at new position
-        placeEntity(entity, newX, newY);
+        // Update entity position
+        entity.setPosition(newX, newY);
+
+        // Set new tile occupant
+        Tile newTile = getTile(newX, newY);
+        if (newTile != null) newTile.setOccupant(entity);
     }
 
     /**

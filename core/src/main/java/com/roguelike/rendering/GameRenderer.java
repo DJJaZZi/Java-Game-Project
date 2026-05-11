@@ -184,8 +184,7 @@ public class GameRenderer {
      * Resize camera when window resizes
      */
     public void resize(int width, int height) {
-        camera.viewportWidth = width / tileSize;
-        camera.viewportHeight = height / tileSize;
+        camera.setToOrtho(false, width, height);
         camera.update();
     }
 
