@@ -1,0 +1,69 @@
+decorations.png
+size:512,64
+repeat:none
+2Boxes
+bounds:140,32,25,30
+2Boxes-1
+bounds:191,35,19,27
+3Boxes
+bounds:2,26,28,36
+Barrel(dark)
+bounds:340,38,16,24
+Barrel(light)
+bounds:358,38,16,24
+Big_Puddle
+bounds:92,51,46,11
+Chest
+bounds:280,44,19,18
+Chest_Opened
+bounds:426,48,19,14
+Chest_enoughGold
+bounds:2,2,29,22
+Chest_littleGold
+bounds:233,42,21,20
+Enough_Gold 1
+bounds:92,37,31,12
+Enough_Gold 2
+bounds:301,45,19,17
+Jugs
+bounds:33,4,21,24
+Large_Box(dark)
+bounds:212,35,19,27
+Large_Jug 1
+bounds:410,43,14,19
+Large_Jug 2
+bounds:394,43,14,19
+LotOf_Gold
+bounds:256,45,22,17
+MediumSmall_Puddle
+bounds:233,35,17,5
+Medium_Box(dark)
+bounds:322,39,16,23
+Medium_Box(light)
+bounds:376,39,16,23
+Medium_Jug 1
+bounds:71,14,11,16
+Medium_Jug 2
+bounds:84,14,11,16
+Medium_Puddle
+bounds:464,57,22,5
+Mix 1
+bounds:32,30,29,32
+Mix 2
+bounds:63,32,27,30
+Mix 3
+bounds:167,33,22,29
+Rectangle 11
+bounds:447,49,15,13
+Small_Box(dark)
+bounds:56,10,13,18
+Small_Box(light)
+bounds:125,31,13,18
+Small_Gold
+bounds:97,14,10,7
+Small_Jug 1
+bounds:97,23,9,12
+Small_Jug 2
+bounds:108,23,9,12
+Small_Puddle
+bounds:394,39,13,2
