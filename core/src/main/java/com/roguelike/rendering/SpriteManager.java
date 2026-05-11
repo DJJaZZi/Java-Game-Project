@@ -113,6 +113,108 @@ public class SpriteManager {
     }
 
     /**
+     * Build a fully configured EntityAnimator for the given entity type.
+     */
+    public EntityAnimator buildAnimator(String entityType) {
+        EntityAnimator animator = new EntityAnimator();
+
+        switch (entityType.toLowerCase()) {
+            case "player":
+                animator.addAnimation(EntityAnimator.AnimState.IDLE,
+                    new SpriteAnimation(list(
+                        regions.get("player_idle_1"),
+                        regions.get("player_idle_2"),
+                        regions.get("player_idle_3"),
+                        regions.get("player_idle")
+                    ), 0.15f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.RUN,
+                    new SpriteAnimation(list(
+                        regions.get("player_run_1"),
+                        regions.get("player_run_2"),
+                        regions.get("player_run_3"),
+                        regions.get("player_run_4")
+                    ), 0.1f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.ATTACK,
+                    new SpriteAnimation(list(
+                        regions.get("player_attack_1"),
+                        regions.get("player_attack_2")
+                    ), 0.08f, false));
+                break;
+
+            case "goblin":
+                animator.addAnimation(EntityAnimator.AnimState.IDLE,
+                    new SpriteAnimation(list(
+                        regions.get("goblin_idle_1"),
+                        regions.get("goblin_idle_2"),
+                        regions.get("goblin_idle_3")
+                    ), 0.15f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.RUN,
+                    new SpriteAnimation(list(
+                        regions.get("goblin_run_1"),
+                        regions.get("goblin_run_2"),
+                        regions.get("goblin_run_3")
+                    ), 0.1f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.ATTACK,
+                    new SpriteAnimation(list(
+                        regions.get("goblin_attack_1"),
+                        regions.get("goblin_attack_2")
+                    ), 0.08f, false));
+
+                animator.addAnimation(EntityAnimator.AnimState.DEAD,
+                    new SpriteAnimation(list(
+                        regions.get("goblin_dead_1")
+                    ), 0.2f, false));
+                break;
+
+            case "orc":
+                animator.addAnimation(EntityAnimator.AnimState.IDLE,
+                    new SpriteAnimation(list(
+                        regions.get("orc_idle_1"),
+                        regions.get("orc_idle_2"),
+                        regions.get("orc_idle_3"),
+                        regions.get("orc_idle_4")
+                    ), 0.18f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.RUN,
+                    new SpriteAnimation(list(
+                        regions.get("orc_run_1"),
+                        regions.get("orc_run_2"),
+                        regions.get("orc_run_3")
+                    ), 0.1f, true));
+
+                animator.addAnimation(EntityAnimator.AnimState.ATTACK,
+                    new SpriteAnimation(list(
+                        regions.get("orc_attack_1"),
+                        regions.get("orc_attack_2")
+                    ), 0.1f, false));
+
+                animator.addAnimation(EntityAnimator.AnimState.DEAD,
+                    new SpriteAnimation(list(
+                        regions.get("orc_dead_1")
+                    ), 0.2f, false));
+                break;
+        }
+
+        return animator;
+    }
+
+
+    // Helper to build a list and skip nulls safely
+    private java.util.List<com.badlogic.gdx.graphics.g2d.TextureRegion> list(
+        com.badlogic.gdx.graphics.g2d.TextureRegion... frames) {
+        java.util.List<com.badlogic.gdx.graphics.g2d.TextureRegion> result = new java.util.ArrayList<>();
+        for (com.badlogic.gdx.graphics.g2d.TextureRegion f : frames) {
+            if (f != null) result.add(f);
+        }
+        return result;
+    }
+
+
+    /**
      * Cut a region from a texture using top-left pixel coordinates.
      */
     private void cut(String key, Texture tex, int x, int y, int w, int h) {

@@ -7,11 +7,15 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
+import com.roguelike.core.entities.Entity;
 import com.roguelike.core.game.GameManager;
 import com.roguelike.core.entities.Player;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.dungeon.Tile;
+import com.roguelike.core.entities.EntityState;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * GameRenderer - Main rendering system
@@ -98,47 +102,42 @@ public class GameRenderer {
      * SpriteBatch must be used separately from ShapeRenderer.
      */
     private void renderEntities(GameManager gameManager) {
-        // End shape rendering before starting batch
         shapeRenderer.end();
-
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        // Render player
         Player player = gameManager.getPlayer();
         if (player != null) {
-            renderEntitySprite(player, "player", "idle");
+            EntityAnimator anim = getOrCreateAnimator("player", "player");
+            syncAnimatorToEntity(anim, player);
+            anim.update(Gdx.graphics.getDeltaTime());
+            drawAnimated(player, anim);
         }
 
-        // Render enemies
         if (gameManager.getCurrentLevel() != null) {
             for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
-                if (enemy.isAlive()) {
-                    String type = enemy.getEnemyType().toLowerCase(); // "goblin" or "orc"
-                    renderEntitySprite(enemy, type, "idle");
-                }
+                String key = "enemy_" + enemy.getX() + "_" + enemy.getY();
+                // use enemy type as animator key — unique per enemy instance via identity
+                String animKey = System.identityHashCode(enemy) + "";
+                EntityAnimator anim = getOrCreateAnimator(animKey, enemy.getEnemyType().toLowerCase());
+                syncAnimatorToEntity(anim, enemy);
+                anim.update(Gdx.graphics.getDeltaTime());
+                drawAnimated(enemy, anim);
             }
         }
 
         batch.end();
 
-        // Resume shape rendering for health bars
+        // Health bars
         shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
-
-        // Draw health bars (shape renderer)
-        if (gameManager.getPlayer() != null) {
-            drawHealthBar(gameManager.getPlayer());
-        }
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        if (gameManager.getPlayer() != null) drawHealthBar(gameManager.getPlayer());
         if (gameManager.getCurrentLevel() != null) {
-            for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
-                if (enemy.isAlive()) drawHealthBar(enemy);
+            for (Enemy e : gameManager.getCurrentLevel().getEnemies()) {
+                if (e.isAlive()) drawHealthBar(e);
             }
         }
-
         shapeRenderer.end();
-
-        // Re-open for anything after (the outer render() calls shapeRenderer.end() — remove that call)
     }
 
     /**
@@ -207,6 +206,56 @@ public class GameRenderer {
             camera.position.y = player.getY() * tileSize + tileSize / 2;
             camera.update();
         }
+    }
+
+    // Add to GameRenderer fields:
+    private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
+
+    private EntityAnimator getOrCreateAnimator(String key, String entityType) {
+        if (!animatorCache.containsKey(key)) {
+            animatorCache.put(key, spriteManager.buildAnimator(entityType));
+        }
+        return animatorCache.get(key);
+    }
+
+    /**
+     * Map entity's game state → animator state.
+     */
+    private void syncAnimatorToEntity(EntityAnimator animator,
+                                      Entity entity) {
+        if (!entity.isAlive()) {
+            animator.setState(EntityAnimator.AnimState.DEAD);
+            return;
+        }
+
+        EntityState state = entity.getState();
+        switch (state) {
+            case MOVING:
+                animator.setState(EntityAnimator.AnimState.RUN);
+                break;
+            case ATTACKING:
+                animator.setState(EntityAnimator.AnimState.ATTACK);
+                break;
+            case DEAD:
+                animator.setState(EntityAnimator.AnimState.DEAD);
+                break;
+            default:
+                animator.setState(EntityAnimator.AnimState.IDLE);
+                break;
+        }
+    }
+
+    private void drawAnimated(com.roguelike.core.entities.Entity entity, EntityAnimator animator) {
+        TextureRegion frame = animator.getCurrentFrame();
+        if (frame == null) return;
+
+        float worldX = entity.getX() * tileSize;
+        float worldY = entity.getY() * tileSize;
+        float scale  = tileSize / (float) Math.max(frame.getRegionWidth(), frame.getRegionHeight());
+        float drawW  = frame.getRegionWidth()  * scale;
+        float drawH  = frame.getRegionHeight() * scale;
+
+        batch.draw(frame, worldX + (tileSize - drawW) / 2f, worldY + (tileSize - drawH) / 2f, drawW, drawH);
     }
 
     /**
