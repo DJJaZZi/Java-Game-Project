@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.roguelike.core.game.GameManager;
@@ -32,31 +33,26 @@ public class GameRenderer {
         this.uiRenderer = new UIRenderer();
     }
 
-    /**
-     * Main render method called each frame
-     */
     public void render(GameManager gameManager) {
         updateCamera(gameManager);
 
-        // Clear screen
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Tell the ShapeRenderer to align with the camera and begin drawing filled shapes
+        // --- Draw dungeon tiles ---
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        // Render dungeon
         if (gameManager.getCurrentLevel() != null) {
             renderDungeon(gameManager.getCurrentLevel());
+        }
+        shapeRenderer.end();
+
+        // --- Draw entities (sprites + health bars) ---
+        if (gameManager.getCurrentLevel() != null) {
             renderEntities(gameManager);
         }
 
-        // End the ShapeRenderer
-        shapeRenderer.end();
-        // -----------------------
-
-        // Render UI (on top, fixed screen space)
+        // --- Draw UI overlay ---
         batch.setProjectionMatrix(getUIProjectionMatrix());
         batch.begin();
         uiRenderer.render(batch, gameManager.getPlayer());
@@ -98,22 +94,51 @@ public class GameRenderer {
     }
 
     /**
-     * Render all entities (player and enemies)
+     * Render all entities using sprites.
+     * SpriteBatch must be used separately from ShapeRenderer.
      */
     private void renderEntities(GameManager gameManager) {
+        // End shape rendering before starting batch
+        shapeRenderer.end();
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
         // Render player
-        if (gameManager.getPlayer() != null) {
-            renderEntity(gameManager.getPlayer(), 0.2f, 0.8f, 1f); // Blue
+        Player player = gameManager.getPlayer();
+        if (player != null) {
+            renderEntitySprite(player, "player", "idle");
         }
 
         // Render enemies
         if (gameManager.getCurrentLevel() != null) {
             for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
                 if (enemy.isAlive()) {
-                    renderEntity(enemy, 1f, 0.2f, 0.2f); // Red
+                    String type = enemy.getEnemyType().toLowerCase(); // "goblin" or "orc"
+                    renderEntitySprite(enemy, type, "idle");
                 }
             }
         }
+
+        batch.end();
+
+        // Resume shape rendering for health bars
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
+
+        // Draw health bars (shape renderer)
+        if (gameManager.getPlayer() != null) {
+            drawHealthBar(gameManager.getPlayer());
+        }
+        if (gameManager.getCurrentLevel() != null) {
+            for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
+                if (enemy.isAlive()) drawHealthBar(enemy);
+            }
+        }
+
+        shapeRenderer.end();
+
+        // Re-open for anything after (the outer render() calls shapeRenderer.end() — remove that call)
     }
 
     /**
@@ -125,38 +150,54 @@ public class GameRenderer {
     }
 
     /**
-     * Render an entity (player or enemy)
+     * Draw a sprite for an entity, centered on its tile.
      */
-    private void renderEntity(com.roguelike.core.entities.Entity entity,
-                              float r, float g, float b) {
-        float x = entity.getX() * tileSize + tileSize / 4;
-        float y = entity.getY() * tileSize + tileSize / 4;
-        float size = tileSize / 2;
+    private void renderEntitySprite(com.roguelike.core.entities.Entity entity,
+                                    String type, String state) {
+        TextureRegion frame = spriteManager.getFrame(type, state);
+        if (frame == null) {
+            // Fallback: draw a colored rectangle so it's always visible
+            batch.end();
+            shapeRenderer.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
+            if (type.equals("player")) shapeRenderer.setColor(0.2f, 0.5f, 1f, 1);
+            else if (type.equals("goblin")) shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1);
+            else shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1);
+            shapeRenderer.rect(entity.getX() * tileSize, entity.getY() * tileSize, tileSize, tileSize);
+            shapeRenderer.end();
+            batch.begin();
+            return;
+        }
 
-        // Draw entity as a circle
-        shapeRenderer.setColor(r, g, b, 1);
-        shapeRenderer.circle(x, y, size / 2);
+        float worldX = entity.getX() * tileSize;
+        float worldY = entity.getY() * tileSize;
 
-        // Draw health bar above entity
-        drawHealthBar(x, y, entity);
+        // Scale sprite to fit tile (keep aspect ratio, center it)
+        float spriteW = frame.getRegionWidth();
+        float spriteH = frame.getRegionHeight();
+        float scale   = tileSize / Math.max(spriteW, spriteH);
+        float drawW   = spriteW * scale;
+        float drawH   = spriteH * scale;
+        float offsetX = (tileSize - drawW) / 2f;
+        float offsetY = (tileSize - drawH) / 2f;
+
+        batch.draw(frame, worldX + offsetX, worldY + offsetY, drawW, drawH);
     }
 
     /**
-     * Draw health bar above entity
+     * Health bar drawn with ShapeRenderer (call inside shapeRenderer.begin block).
      */
-    private void drawHealthBar(float x, float y, com.roguelike.core.entities.Entity entity) {
-        float healthPercent = entity.getHealthPercent() / 100f;
-        float barWidth = tileSize / 2;
-        float barHeight = 4f;
-        float barY = y + tileSize / 2;
+    private void drawHealthBar(com.roguelike.core.entities.Entity entity) {
+        float worldX = entity.getX() * tileSize;
+        float worldY = entity.getY() * tileSize + tileSize + 2f;
 
-        // Background (red)
-        shapeRenderer.setColor(1, 0, 0, 1);
-        shapeRenderer.rect(x - barWidth / 2, barY, barWidth, barHeight);
+        float barW = tileSize;
+        float barH = 4f;
+        float hp   = entity.getHealthPercent() / 100f;
 
-        // Health (green)
-        shapeRenderer.setColor(0, 1, 0, 1);
-        shapeRenderer.rect(x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+        shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1);
+        shapeRenderer.rect(worldX, worldY, barW, barH);
+        shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1);
+        shapeRenderer.rect(worldX, worldY, barW * hp, barH);
     }
 
     /**
