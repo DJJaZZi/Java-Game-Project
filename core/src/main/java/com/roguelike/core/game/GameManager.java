@@ -72,23 +72,19 @@ public class GameManager implements CombatListener, CollisionListener {
         this.currentLevel = dungeonGenerator.generate(currentFloor);
         this.levelCompleted = false;
 
-        if (currentLevel != null && player != null && !currentLevel.getRooms().isEmpty()) {
-            int[] spawnPos = currentLevel.getRooms().get(0).getCenter();
+        if (currentLevel != null && player != null) {
+            // Spawn at left side of map (spawn room area)
+            int spawnX = 4;
+            int spawnY = 6; // vertically centered on 14-tile height
 
-            // Find a free tile near center
-            int spawnX = spawnPos[0];
-            int spawnY = spawnPos[1];
-
-            // Force-place player: clear any occupant first, then place
             Tile spawnTile = currentLevel.getTile(spawnX, spawnY);
-            if (spawnTile != null && spawnTile.isWalkable()) {
-                spawnTile.setOccupant(null); // clear just in case
+            if (spawnTile != null) {
+                spawnTile.setOccupant(null);
                 player.setPosition(spawnX, spawnY);
                 spawnTile.setOccupant(player);
                 System.out.println("[GameManager] Player spawned at (" + spawnX + "," + spawnY + ")");
             }
 
-            // Give enemies their dungeon reference for AI
             for (Enemy enemy : currentLevel.getEnemies()) {
                 enemy.setDungeonLevel(currentLevel);
             }

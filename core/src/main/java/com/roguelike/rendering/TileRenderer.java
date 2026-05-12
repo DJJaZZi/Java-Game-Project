@@ -3,60 +3,43 @@ package com.roguelike.rendering;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.roguelike.core.dungeon.RoomLayout;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-/**
- * TileRenderer - draws room PNG images at their world positions.
- * Each PNG is drawn as one big image — no tile slicing needed.
- */
 public class TileRenderer {
 
-    private final Map<String, Texture> textureCache = new HashMap<>();
+    private Texture mapTexture;
 
-    public void render(SpriteBatch batch, List<RoomLayout> rooms) {
-        for (RoomLayout room : rooms) {
-            Texture tex = getTexture(room.imagePath);
-            if (tex == null) continue;
+    // Exact pixel dimensions of your PNG
+    private static final float MAP_WIDTH  = 5392f;
+    private static final float MAP_HEIGHT = 416f;
+    private static final String MAP_PATH  = "textures/maps/rooms/full_level 5392x416.png";
 
-            if (room.flipped) {
-                // Draw mirrored (spawn room)
-                TextureRegion region = new TextureRegion(tex);
-                region.flip(true, false);
-                batch.draw(region,
-                    room.worldX, room.worldY,
-                    room.pixelWidth, room.pixelHeight);
+    public TileRenderer() {
+        try {
+            if (Gdx.files.internal(MAP_PATH).exists()) {
+                mapTexture = new Texture(Gdx.files.internal(MAP_PATH));
+                System.out.println("[TileRenderer] Map loaded: " + MAP_WIDTH + "x" + MAP_HEIGHT);
             } else {
-                batch.draw(tex,
-                    room.worldX, room.worldY,
-                    room.pixelWidth, room.pixelHeight);
+                System.err.println("[TileRenderer] Map not found: " + MAP_PATH);
             }
+        } catch (Exception e) {
+            System.err.println("[TileRenderer] Error loading map: " + e.getMessage());
         }
     }
 
-    private Texture getTexture(String path) {
-        if (textureCache.containsKey(path)) return textureCache.get(path);
-        try {
-            if (!Gdx.files.internal(path).exists()) {
-                System.err.println("[TileRenderer] File not found: " + path);
-                return null;
-            }
-            Texture tex = new Texture(Gdx.files.internal(path));
-            textureCache.put(path, tex);
-            System.out.println("[TileRenderer] Loaded: " + path);
-            return tex;
-        } catch (Exception e) {
-            System.err.println("[TileRenderer] Error loading: " + path + " — " + e.getMessage());
-            return null;
-        }
+    /**
+     * Draw the full map PNG at world position (0, 0).
+     * Call this inside SpriteBatch.begin/end.
+     */
+    public void render(SpriteBatch batch) {
+        if (mapTexture == null) return;
+        batch.draw(mapTexture, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+    }
+
+    public boolean isLoaded() {
+        return mapTexture != null;
     }
 
     public void dispose() {
-        for (Texture t : textureCache.values()) t.dispose();
-        textureCache.clear();
+        if (mapTexture != null) mapTexture.dispose();
     }
 }

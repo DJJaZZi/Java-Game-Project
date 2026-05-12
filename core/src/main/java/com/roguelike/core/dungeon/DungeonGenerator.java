@@ -11,8 +11,8 @@ public class DungeonGenerator {
     private final Random random;
 
     // Grid dimensions — used only for bounds checking in spawnIfWalkable
-    private static final int WIDTH  = 500; // large enough for the full fixed layout
-    private static final int HEIGHT = 60;
+    private static final int WIDTH  = 169; // 5392 / 32 = 168.5 → 169
+    private static final int HEIGHT = 14;  // 416  / 32 = 13    → 14
 
     private final EnemyFactory goblinFactory = new GoblinFactory();
     private final EnemyFactory orcFactory    = new OrcFactory();
@@ -26,38 +26,23 @@ public class DungeonGenerator {
     // =========================================================================
 
     public DungeonLevel generate(int floorNumber) {
-        System.out.println("[DungeonGenerator] Generating fixed layout floor " + floorNumber);
+        System.out.println("[DungeonGenerator] Generating floor " + floorNumber);
 
-        // 1. Build the fixed room sequence
-        FixedDungeonLayout layoutBuilder = new FixedDungeonLayout();
-        List<RoomLayout> roomLayouts = layoutBuilder.build();
+        // Tile grid — all floor, PNG handles visuals
+        Tile[][] tiles = new Tile[WIDTH][HEIGHT];
+        for (int x = 0; x < WIDTH; x++)
+            for (int y = 0; y < HEIGHT; y++)
+                tiles[x][y] = new Tile(TileType.FLOOR);
 
-        // 2. Convert pixel layout → tile grid
-        TileMapBuilder tileBuilder = new TileMapBuilder();
-        int gridW = tileBuilder.calcGridWidth(roomLayouts);
-        int gridH = tileBuilder.calcGridHeight(roomLayouts);
-        Tile[][] tiles = tileBuilder.build(roomLayouts, gridW, gridH);
-
-        // 3. Convert RoomLayouts → Room objects (used for spawn positions + exit)
+        // One big room covering the whole map
         List<Room> rooms = new ArrayList<>();
-        for (RoomLayout rl : roomLayouts) {
-            int rx = rl.worldX / 32;
-            int ry = Math.max(0, rl.worldY / 32);
-            int rw = rl.pixelWidth  / 32;
-            int rh = rl.pixelHeight / 32;
-            rooms.add(new Room(rx, ry, rw, rh));
-        }
+        rooms.add(new Room(0, 0, WIDTH, HEIGHT));
 
-        // 4. Spawn enemies in the correct rooms
-        List<Enemy> enemies = spawnEnemiesInLayout(floorNumber, roomLayouts, tiles, gridW, gridH);
+        // Spawn enemies across the map
+        List<Enemy> enemies = spawnEnemiesOnMap(floorNumber, tiles);
 
-        // 5. Build the level object
         DungeonLevel level = new DungeonLevel(tiles, rooms, enemies, floorNumber);
-        level.setRoomLayouts(roomLayouts);                      // renderer needs this
-        level.setExitRoom(rooms.get(rooms.size() - 1));        // last room = exit
-
-        System.out.println("[DungeonGenerator] Floor " + floorNumber + " complete! "
-            + rooms.size() + " rooms, " + enemies.size() + " enemies.");
+        level.setExitRoom(rooms.get(0));
         return level;
     }
 
@@ -65,35 +50,23 @@ public class DungeonGenerator {
     //  ENEMY SPAWNING
     // =========================================================================
 
-    private List<Enemy> spawnEnemiesInLayout(int floor,
-                                             List<RoomLayout> layouts,
-                                             Tile[][] tiles,
-                                             int gridW, int gridH) {
+    private List<Enemy> spawnEnemiesOnMap(int floor, Tile[][] tiles) {
         List<Enemy> enemies = new ArrayList<>();
 
-        for (RoomLayout rl : layouts) {
-            if (rl.type == RoomLayout.RoomImageType.GOBLIN) {
-                // 2 goblins per goblin room
-                int tileX = rl.worldX / 32;
-                int tileY = Math.max(1, rl.worldY / 32);
-                int tileW = rl.pixelWidth  / 32;
-                int tileH = rl.pixelHeight / 32;
+        // Goblin positions — spread across the map (adjust X positions to match your rooms)
+        int[][] goblinSpawns = {
+            {20, 6}, {22, 7},   // goblin room 1
+            {45, 5}, {47, 7},   // goblin room 2
+            {70, 6}, {72, 6},   // goblin room 3
+            {110, 5}, {112, 7}, // goblin room 4
+        };
 
-                for (int i = 0; i < 2; i++) {
-                    int spawnX = tileX + 3 + random.nextInt(Math.max(1, tileW - 4));
-                    int spawnY = tileY + 2 + random.nextInt(Math.max(1, tileH - 3));
-                    spawnIfWalkable(goblinFactory, spawnX, spawnY,
-                        floor, tiles, enemies, gridW, gridH);
-                }
-
-            } else if (rl.type == RoomLayout.RoomImageType.BOSS) {
-                // 1 orc at the center of the boss room
-                int spawnX = (rl.worldX / 32) + (rl.pixelWidth  / 32) / 2;
-                int spawnY = Math.max(1, (rl.worldY / 32) + (rl.pixelHeight / 32) / 2);
-                spawnIfWalkable(orcFactory, spawnX, spawnY,
-                    floor, tiles, enemies, gridW, gridH);
-            }
+        for (int[] pos : goblinSpawns) {
+            spawnIfWalkable(goblinFactory, pos[0], pos[1], floor, tiles, enemies);
         }
+
+        // Orc boss — far right (boss room)
+        spawnIfWalkable(orcFactory, 158, 6, floor, tiles, enemies);
 
         return enemies;
     }
@@ -101,12 +74,9 @@ public class DungeonGenerator {
     /**
      * Only spawns an enemy if the tile exists, is a FLOOR, and has no occupant.
      */
-    private void spawnIfWalkable(EnemyFactory factory,
-                                 int x, int y, int floor,
-                                 Tile[][] tiles, List<Enemy> out,
-                                 int gridW, int gridH) {
-        if (x < 0 || x >= gridW || y < 0 || y >= gridH) return;
-
+    private void spawnIfWalkable(EnemyFactory factory, int x, int y,
+                                 int floor, Tile[][] tiles, List<Enemy> out) {
+        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
         Tile tile = tiles[x][y];
         if (tile == null || tile.type != TileType.FLOOR || tile.occupant != null) return;
 

@@ -13,24 +13,11 @@ public class TileMapBuilder {
     public Tile[][] build(List<RoomLayout> rooms, int gridWidth, int gridHeight) {
         Tile[][] tiles = new Tile[gridWidth][gridHeight];
 
-        // Fill everything with walls first
+        // Fill everything as FLOOR — the PNG handles visuals,
+        // the tile grid just needs to allow movement everywhere
         for (int x = 0; x < gridWidth; x++)
             for (int y = 0; y < gridHeight; y++)
-                tiles[x][y] = new Tile(TileType.WALL);
-
-        // Carve floor tiles for each room
-        for (RoomLayout room : rooms) {
-            int tileX = room.worldX / TILE_SIZE;
-            int tileY = room.worldY / TILE_SIZE;
-            int tileW = room.pixelWidth  / TILE_SIZE;
-            int tileH = room.pixelHeight / TILE_SIZE;
-
-            for (int x = tileX; x < tileX + tileW && x < gridWidth; x++) {
-                for (int y = tileY; y < tileY + tileH && y < gridHeight; y++) {
-                    if (y >= 0) tiles[x][y] = new Tile(TileType.FLOOR);
-                }
-            }
-        }
+                tiles[x][y] = new Tile(TileType.FLOOR);
 
         return tiles;
     }

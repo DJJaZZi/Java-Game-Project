@@ -91,26 +91,23 @@ public class GameRenderer {
     //  DUNGEON RENDERING
     // ═════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Draws room PNG images if available, falls back to colored tiles.
-     * Manages its own SpriteBatch begin/end — does NOT use ShapeRenderer.
-     */
     private void renderDungeon(DungeonLevel level) {
-        List<RoomLayout> layouts = level.getRoomLayouts();
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
 
-        if (layouts != null && !layouts.isEmpty()) {
-            // Draw PNG room images
-            batch.setProjectionMatrix(camera.combined);
-            batch.begin();
-            tileRenderer.render(batch, layouts);
-            batch.end();
+        if (tileRenderer.isLoaded()) {
+            tileRenderer.render(batch); // draw full map PNG
         } else {
-            // Fallback: colored rectangles
+            // Fallback: colored tiles
+            batch.end();
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             renderTilesFallback(level);
             shapeRenderer.end();
+            return;
         }
+
+        batch.end();
     }
 
     private void renderTilesFallback(DungeonLevel level) {
