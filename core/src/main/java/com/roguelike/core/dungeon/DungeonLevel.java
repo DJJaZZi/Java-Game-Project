@@ -116,20 +116,20 @@ public class DungeonLevel {
      * Move entity from one position to another
      */
     public void moveEntity(Entity entity, int newX, int newY) {
-        if (!isFloor(newX, newY)) return;   // bounds + floor check (not passable — we already checked)
-        if (!isWalkable(newX, newY)) return; // occupant check
+        if (!isFloor(newX, newY)) return;  // only wall check — not occupant check
 
         // Clear old tile
         Tile oldTile = getTile(entity.getX(), entity.getY());
-        if (oldTile != null) oldTile.clearOccupant();
+        if (oldTile != null) oldTile.setOccupant(null);
 
-        // Update entity position
+        // Move
         entity.setPosition(newX, newY);
 
-        // Set new tile occupant
+        // Set new tile
         Tile newTile = getTile(newX, newY);
         if (newTile != null) newTile.setOccupant(entity);
     }
+
 
     /**
      * Get all entities at a position

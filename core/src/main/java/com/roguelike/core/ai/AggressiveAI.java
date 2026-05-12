@@ -33,27 +33,26 @@ public class AggressiveAI implements AIStrategy {
 
     @Override
     public int[] decideNextMove(Enemy enemy, Player player, DungeonLevel level) {
-        if (enemy == null || player == null || level == null) {
-            return new int[]{0, 0};
-        }
+        if (enemy == null || player == null || level == null) return new int[]{0, 0};
 
         int dx = Integer.compare(player.getX(), enemy.getX());
         int dy = Integer.compare(player.getY(), enemy.getY());
 
-        if (level.isWalkable(enemy.getX() + dx, enemy.getY() + dy)) {
+        // Use isFloor() not isWalkable() — enemies can plan through occupied tiles
+        if (level.isFloor(enemy.getX() + dx, enemy.getY() + dy)) {
             return new int[]{dx, dy};
         }
-
-        if (dx != 0 && level.isWalkable(enemy.getX() + dx, enemy.getY())) {
+        // Try horizontal only
+        if (dx != 0 && level.isFloor(enemy.getX() + dx, enemy.getY())) {
             return new int[]{dx, 0};
         }
-        if (dy != 0 && level.isWalkable(enemy.getX(), enemy.getY() + dy)) {
+        // Try vertical only
+        if (dy != 0 && level.isFloor(enemy.getX(), enemy.getY() + dy)) {
             return new int[]{0, dy};
         }
 
         return new int[]{0, 0};
     }
-
     @Override
     public String getAIName() {
         return "AggressiveAI";
