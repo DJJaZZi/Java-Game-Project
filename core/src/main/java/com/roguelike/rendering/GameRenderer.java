@@ -7,102 +7,145 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
-import com.roguelike.core.entities.Entity;
-import com.roguelike.core.game.GameManager;
-import com.roguelike.core.entities.Player;
-import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.dungeon.DungeonLevel;
+import com.roguelike.core.dungeon.RoomLayout;
 import com.roguelike.core.dungeon.Tile;
-import com.roguelike.core.entities.EntityState;
+import com.roguelike.core.entities.Entity;
+import com.roguelike.core.entities.Enemy;
+import com.roguelike.core.entities.Player;
+import com.roguelike.core.game.GameManager;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * GameRenderer - Main rendering system
- * Handles all drawing to the screen
- */
 public class GameRenderer {
-    private SpriteBatch batch;
-    private ShapeRenderer shapeRenderer;
-    private OrthographicCamera camera;
-    private SpriteManager spriteManager;
-    private UIRenderer uiRenderer;
-    private float tileSize = 32f; // Size of each tile in pixels
 
+    // ── Core rendering tools ─────────────────────────────────────────────────
+    private final SpriteBatch       batch;
+    private final ShapeRenderer     shapeRenderer;
+    private final OrthographicCamera camera;
+    private final SpriteManager     spriteManager;
+    private final UIRenderer        uiRenderer;
+    private final TileRenderer      tileRenderer;
+
+    // ── Animator cache — one EntityAnimator per entity instance ──────────────
+    private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
+
+    // ── Constants ────────────────────────────────────────────────────────────
+    private static final float TILE_SIZE = 32f;
+
+    // ── Constructor ──────────────────────────────────────────────────────────
     public GameRenderer() {
-        this.batch = new SpriteBatch();
-        this.shapeRenderer = new ShapeRenderer();
-        this.camera = new OrthographicCamera();
-        this.spriteManager = new SpriteManager();
-        this.uiRenderer = new UIRenderer();
+        batch         = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
+        camera        = new OrthographicCamera();
+        spriteManager = new SpriteManager();
+        uiRenderer    = new UIRenderer();
+        tileRenderer  = new TileRenderer();
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  PUBLIC — called every frame from RoguelikeGame.render()
+    // ═════════════════════════════════════════════════════════════════════════
 
     public void render(GameManager gameManager) {
         updateCamera(gameManager);
 
-        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
+        // Clear screen
+        Gdx.gl.glClearColor(0.05f, 0.05f, 0.05f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // --- Draw dungeon tiles ---
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        if (gameManager.getCurrentLevel() != null) {
-            renderDungeon(gameManager.getCurrentLevel());
-        }
-        shapeRenderer.end();
+        DungeonLevel level = gameManager.getCurrentLevel();
 
-        // --- Draw entities (sprites + health bars) ---
-        if (gameManager.getCurrentLevel() != null) {
+        // 1. Draw dungeon (PNG room images or fallback colored tiles)
+        if (level != null) {
+            renderDungeon(level);
+        }
+
+        // 2. Draw entities (sprites + health bars) — manages its own begin/end
+        if (level != null) {
             renderEntities(gameManager);
         }
 
-        // --- Draw UI overlay ---
-        batch.setProjectionMatrix(getUIProjectionMatrix());
+        // 3. Draw HUD (screen-space, fixed camera)
+        batch.setProjectionMatrix(getUIMatrix());
         batch.begin();
         uiRenderer.render(batch, gameManager.getPlayer());
         batch.end();
     }
 
+    public void resize(int width, int height) {
+        camera.setToOrtho(false, width, height);
+        camera.update();
+    }
+
+    public void dispose() {
+        batch.dispose();
+        shapeRenderer.dispose();
+        spriteManager.dispose();
+        tileRenderer.dispose();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  DUNGEON RENDERING
+    // ═════════════════════════════════════════════════════════════════════════
+
     /**
-     * Render the dungeon tilemap
+     * Draws room PNG images if available, falls back to colored tiles.
+     * Manages its own SpriteBatch begin/end — does NOT use ShapeRenderer.
      */
     private void renderDungeon(DungeonLevel level) {
-        Tile[][] tiles = level.getTiles();
+        List<RoomLayout> layouts = level.getRoomLayouts();
 
+        if (layouts != null && !layouts.isEmpty()) {
+            // Draw PNG room images
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            tileRenderer.render(batch, layouts);
+            batch.end();
+        } else {
+            // Fallback: colored rectangles
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            renderTilesFallback(level);
+            shapeRenderer.end();
+        }
+    }
+
+    private void renderTilesFallback(DungeonLevel level) {
+        Tile[][] tiles = level.getTiles();
         for (int x = 0; x < level.getWidth(); x++) {
             for (int y = 0; y < level.getHeight(); y++) {
                 Tile tile = tiles[x][y];
-
-                // Draw different colors based on tile type
+                if (tile == null) continue;
                 switch (tile.type) {
-                    case WALL:
-                        shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
-                        drawTile(x, y, 0.3f, 0.3f, 0.3f); // Dark gray
-                        break;
-                    case FLOOR:
-                        shapeRenderer.setColor(0.6f, 0.6f, 0.6f, 1);
-                        drawTile(x, y, 0.6f, 0.6f, 0.6f); // Light gray
-                        break;
-                    case DOOR:
-                        drawTile(x, y, 0.8f, 0.6f, 0.2f); // Gold
-                        break;
-                    case TRAP:
-                        drawTile(x, y, 1f, 0.2f, 0.2f); // Red
-                        break;
-                    case CHEST:
-                        drawTile(x, y, 1f, 0.8f, 0.2f); // Orange
-                        break;
+                    case WALL:  drawTileShape(x, y, 0.15f, 0.15f, 0.15f); break;
+                    case FLOOR: drawTileShape(x, y, 0.50f, 0.45f, 0.40f); break;
+                    case DOOR:  drawTileShape(x, y, 0.80f, 0.60f, 0.20f); break;
+                    case TRAP:  drawTileShape(x, y, 1.00f, 0.20f, 0.20f); break;
+                    case CHEST: drawTileShape(x, y, 1.00f, 0.80f, 0.20f); break;
+                    default:    drawTileShape(x, y, 0.30f, 0.30f, 0.30f); break;
                 }
             }
         }
     }
 
+    private void drawTileShape(int x, int y, float r, float g, float b) {
+        shapeRenderer.setColor(r, g, b, 1f);
+        shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  ENTITY RENDERING
+    // ═════════════════════════════════════════════════════════════════════════
+
     /**
-     * Render all entities using sprites.
-     * SpriteBatch must be used separately from ShapeRenderer.
+     * Draws all entity sprites, then health bars on top.
+     * Fully manages its own SpriteBatch and ShapeRenderer begin/end.
      */
     private void renderEntities(GameManager gameManager) {
-        shapeRenderer.end();
+        // ── Sprites ──────────────────────────────────────────────────────────
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -114,102 +157,62 @@ public class GameRenderer {
             drawAnimated(player, anim);
         }
 
-        if (gameManager.getCurrentLevel() != null) {
-            for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
-                String key = "enemy_" + enemy.getX() + "_" + enemy.getY();
-                // use enemy type as animator key — unique per enemy instance via identity
-                String animKey = System.identityHashCode(enemy) + "";
-                EntityAnimator anim = getOrCreateAnimator(animKey, enemy.getEnemyType().toLowerCase());
-                syncAnimatorToEntity(anim, enemy);
-                anim.update(Gdx.graphics.getDeltaTime());
-                drawAnimated(enemy, anim);
-            }
+        for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
+            String animKey = "enemy_" + System.identityHashCode(enemy);
+            EntityAnimator anim = getOrCreateAnimator(animKey,
+                enemy.getEnemyType().toLowerCase());
+            syncAnimatorToEntity(anim, enemy);
+            anim.update(Gdx.graphics.getDeltaTime());
+            drawAnimated(enemy, anim);
         }
 
         batch.end();
 
-        // Health bars
+        // ── Health bars ───────────────────────────────────────────────────────
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        if (gameManager.getPlayer() != null) drawHealthBar(gameManager.getPlayer());
-        if (gameManager.getCurrentLevel() != null) {
-            for (Enemy e : gameManager.getCurrentLevel().getEnemies()) {
-                if (e.isAlive()) drawHealthBar(e);
-            }
+
+        if (player != null && player.isAlive()) {
+            drawHealthBar(player);
         }
+        for (Enemy e : gameManager.getCurrentLevel().getEnemies()) {
+            if (e.isAlive()) drawHealthBar(e);
+        }
+
         shapeRenderer.end();
     }
 
-    /**
-     * Draw a single tile
-     */
-    private void drawTile(int x, int y, float r, float g, float b) {
-        shapeRenderer.setColor(r, g, b, 1);
-        shapeRenderer.rect(x * tileSize, y * tileSize, tileSize, tileSize);
-    }
+    private void drawAnimated(Entity entity, EntityAnimator animator) {
+        TextureRegion frame = animator.getCurrentFrame();
+        if (frame == null) return;
 
-    private void renderEntitySprite(com.roguelike.core.entities.Entity entity,
-                                    String type, String state) {
-        TextureRegion frame = spriteManager.getFrame(type, state);
-
-        if (frame == null) {
-            // Absolute fallback — colored square so entity is always visible
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            shapeRenderer.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
-            if (type.equals("player"))      shapeRenderer.setColor(0.2f, 0.5f, 1f, 1f);
-            else if (type.equals("goblin")) shapeRenderer.setColor(0.2f, 0.8f, 0.2f, 1f);
-            else                            shapeRenderer.setColor(0.8f, 0.2f, 0.2f, 1f);
-            shapeRenderer.rect(entity.getX() * tileSize, entity.getY() * tileSize, tileSize, tileSize);
-            shapeRenderer.end();
-            return;
-        }
-
-        float worldX = entity.getX() * tileSize;
-        float worldY = entity.getY() * tileSize;
-
-        // Scale to fit inside one tile, centered
-        float spriteW = frame.getRegionWidth();
-        float spriteH = frame.getRegionHeight();
-        float scale   = tileSize / Math.max(spriteW, spriteH);
-        float drawW   = spriteW * scale;
-        float drawH   = spriteH * scale;
-        float offX    = (tileSize - drawW) / 2f;
-        float offY    = (tileSize - drawH) / 2f;
+        float worldX = entity.getX() * TILE_SIZE;
+        float worldY = entity.getY() * TILE_SIZE;
+        float scale  = TILE_SIZE / (float) Math.max(frame.getRegionWidth(), frame.getRegionHeight());
+        float drawW  = frame.getRegionWidth()  * scale;
+        float drawH  = frame.getRegionHeight() * scale;
+        float offX   = (TILE_SIZE - drawW) / 2f;
+        float offY   = (TILE_SIZE - drawH) / 2f;
 
         batch.draw(frame, worldX + offX, worldY + offY, drawW, drawH);
     }
 
-    /**
-     * Health bar drawn with ShapeRenderer (call inside shapeRenderer.begin block).
-     */
-    private void drawHealthBar(com.roguelike.core.entities.Entity entity) {
-        float worldX = entity.getX() * tileSize;
-        float worldY = entity.getY() * tileSize + tileSize + 2f;
+    private void drawHealthBar(Entity entity) {
+        float worldX = entity.getX() * TILE_SIZE;
+        float worldY = entity.getY() * TILE_SIZE + TILE_SIZE + 2f;
+        float barW   = TILE_SIZE;
+        float barH   = 4f;
+        float hpPct  = entity.getHealthPercent() / 100f;
 
-        float barW = tileSize;
-        float barH = 4f;
-        float hp   = entity.getHealthPercent() / 100f;
-
-        shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1);
+        shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
         shapeRenderer.rect(worldX, worldY, barW, barH);
-        shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1);
-        shapeRenderer.rect(worldX, worldY, barW * hp, barH);
+        shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1f);
+        shapeRenderer.rect(worldX, worldY, barW * hpPct, barH);
     }
 
-    /**
-     * Update camera to follow player
-     */
-    private void updateCamera(GameManager gameManager) {
-        Player player = gameManager.getPlayer();
-        if (player != null) {
-            camera.position.x = player.getX() * tileSize + tileSize / 2;
-            camera.position.y = player.getY() * tileSize + tileSize / 2;
-            camera.update();
-        }
-    }
-
-    // Add to GameRenderer fields:
-    private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
+    // ═════════════════════════════════════════════════════════════════════════
+    //  ANIMATION
+    // ═════════════════════════════════════════════════════════════════════════
 
     private EntityAnimator getOrCreateAnimator(String key, String entityType) {
         if (!animatorCache.containsKey(key)) {
@@ -218,11 +221,7 @@ public class GameRenderer {
         return animatorCache.get(key);
     }
 
-    /**
-     * Map entity's game state → animator state.
-     */
     private void syncAnimatorToEntity(EntityAnimator animator, Entity entity) {
-        // ← THIS LINE IS MISSING — add it
         animator.setFacingLeft(entity.isFacingLeft());
 
         if (!entity.isAlive()) {
@@ -238,43 +237,25 @@ public class GameRenderer {
         }
     }
 
-    private void drawAnimated(com.roguelike.core.entities.Entity entity, EntityAnimator animator) {
-        TextureRegion frame = animator.getCurrentFrame();
-        if (frame == null) return;
+    // ═════════════════════════════════════════════════════════════════════════
+    //  CAMERA & UTILITIES
+    // ═════════════════════════════════════════════════════════════════════════
 
-        float worldX = entity.getX() * tileSize;
-        float worldY = entity.getY() * tileSize;
-        float scale  = tileSize / (float) Math.max(frame.getRegionWidth(), frame.getRegionHeight());
-        float drawW  = frame.getRegionWidth()  * scale;
-        float drawH  = frame.getRegionHeight() * scale;
-
-        batch.draw(frame, worldX + (tileSize - drawW) / 2f, worldY + (tileSize - drawH) / 2f, drawW, drawH);
+    private void updateCamera(GameManager gameManager) {
+        Player player = gameManager.getPlayer();
+        if (player != null) {
+            float targetX = player.getX() * TILE_SIZE + TILE_SIZE / 2f;
+            float targetY = player.getY() * TILE_SIZE + TILE_SIZE / 2f;
+            // Smooth follow
+            camera.position.x += (targetX - camera.position.x) * 0.15f;
+            camera.position.y += (targetY - camera.position.y) * 0.15f;
+            camera.update();
+        }
     }
 
-    /**
-     * Get projection matrix for UI (fixed screen space)
-     */
-    private Matrix4 getUIProjectionMatrix() {
-        Matrix4 uiMatrix = new Matrix4();
-        uiMatrix.setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        return uiMatrix;
-    }
-
-    /**
-     * Resize camera when window resizes
-     */
-    public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
-        camera.update();
-    }
-
-    /**
-     * Cleanup
-     */
-    public void dispose() {
-        batch.dispose();
-        shapeRenderer.dispose();
-        spriteManager.dispose();
+    private Matrix4 getUIMatrix() {
+        Matrix4 m = new Matrix4();
+        m.setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        return m;
     }
 }
-
