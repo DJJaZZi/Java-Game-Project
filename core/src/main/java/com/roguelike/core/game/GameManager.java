@@ -174,6 +174,7 @@ public class GameManager implements CombatListener, CollisionListener {
         // Face the right direction
         if (dx < 0) player.setFacingLeft(true);
         if (dx > 0) player.setFacingLeft(false);
+        // dy (up/down) — don't change facing direction
 
         // Schedule state back to IDLE after a short delay
         player.startMoving();                  // ← ADD THIS (see Fix 2)

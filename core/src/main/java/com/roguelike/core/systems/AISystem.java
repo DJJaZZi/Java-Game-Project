@@ -55,6 +55,9 @@ public class AISystem {
                 return;
             }
 
+            if (dx > 0) enemy.setFacingLeft(true);   // moving left → no flip
+            if (dx < 0) enemy.setFacingLeft(false);    // moving right → flip
+
             // Actually move — updates BOTH entity coords AND tile grid
             if (level.isWalkable(newX, newY)) {
                 level.moveEntity(enemy, newX, newY);

@@ -183,6 +183,7 @@ public class SpriteManager {
 
         switch (entityType.toLowerCase()) {
             case "player":
+                animator.setDefaultFacingLeft(false);
                 animator.addAnimation(EntityAnimator.AnimState.IDLE,
                     new SpriteAnimation(list(
                         regions.get("player_idle_1"),
@@ -218,6 +219,7 @@ public class SpriteManager {
                 break;
 
             case "goblin":
+                animator.setDefaultFacingLeft(true);
                 animator.addAnimation(EntityAnimator.AnimState.IDLE,
                     new SpriteAnimation(list(
                         regions.get("goblin_idle_1"),
@@ -245,6 +247,7 @@ public class SpriteManager {
                 break;
 
             case "orc":
+                animator.setDefaultFacingLeft(true);
                 animator.addAnimation(EntityAnimator.AnimState.IDLE,
                     new SpriteAnimation(list(
                         regions.get("orc_idle_1"),

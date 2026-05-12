@@ -221,27 +221,20 @@ public class GameRenderer {
     /**
      * Map entity's game state → animator state.
      */
-    private void syncAnimatorToEntity(EntityAnimator animator,
-                                      Entity entity) {
+    private void syncAnimatorToEntity(EntityAnimator animator, Entity entity) {
+        // ← THIS LINE IS MISSING — add it
+        animator.setFacingLeft(entity.isFacingLeft());
+
         if (!entity.isAlive()) {
-            animator.setState(EntityAnimator.AnimState.DEAD);
+            animator.forceState(EntityAnimator.AnimState.DEAD);
             return;
         }
 
-        EntityState state = entity.getState();
-        switch (state) {
-            case MOVING:
-                animator.setState(EntityAnimator.AnimState.RUN);
-                break;
-            case ATTACKING:
-                animator.setState(EntityAnimator.AnimState.ATTACK);
-                break;
-            case DEAD:
-                animator.setState(EntityAnimator.AnimState.DEAD);
-                break;
-            default:
-                animator.setState(EntityAnimator.AnimState.IDLE);
-                break;
+        switch (entity.getState()) {
+            case MOVING:    animator.setState(EntityAnimator.AnimState.RUN);    break;
+            case ATTACKING: animator.setState(EntityAnimator.AnimState.ATTACK); break;
+            case DEAD:      animator.forceState(EntityAnimator.AnimState.DEAD); break;
+            default:        animator.setState(EntityAnimator.AnimState.IDLE);   break;
         }
     }
 
