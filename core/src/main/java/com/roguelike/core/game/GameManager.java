@@ -4,6 +4,7 @@ import com.roguelike.core.dungeon.DungeonLevel;
 import com.roguelike.core.dungeon.DungeonGenerator;
 import com.roguelike.core.dungeon.Tile;
 import com.roguelike.core.entities.Entity;
+import com.roguelike.core.entities.EntityState;
 import com.roguelike.core.entities.Player;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.systems.CollisionSystem;
@@ -153,22 +154,29 @@ public class GameManager implements CombatListener, CollisionListener {
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
 
-        // Check bounds first
         if (!currentLevel.isFloor(newX, newY)) return;
 
-        // Check if there's an enemy on the target tile — if so, ATTACK instead of move
         Entity occupant = currentLevel.getOccupantAt(newX, newY);
         if (occupant instanceof Enemy) {
             Enemy enemy = (Enemy) occupant;
             if (enemy.isAlive()) {
+                player.startAttack();          // ← sets state = ATTACKING
                 combatSystem.attack(player, enemy);
                 checkDefenderDeath(enemy);
-                return; // Don't move into the enemy's tile
+                return;
             }
         }
 
-        // Tile is free — move the player (updates both entity coords AND tile grid)
+        // Move — set MOVING state BEFORE teleporting
+        player.setState(EntityState.MOVING);   // ← ADD THIS
         currentLevel.moveEntity(player, newX, newY);
+
+        // Face the right direction
+        if (dx < 0) player.setFacingLeft(true);
+        if (dx > 0) player.setFacingLeft(false);
+
+        // Schedule state back to IDLE after a short delay
+        player.startMoving();                  // ← ADD THIS (see Fix 2)
     }
 
     private void checkDefenderDeath(Enemy enemy) {

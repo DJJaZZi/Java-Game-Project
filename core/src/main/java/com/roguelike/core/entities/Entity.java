@@ -26,6 +26,7 @@ public abstract class Entity {
     protected float moveProgress;    // 0-1 for animation
     protected int targetX, targetY;  // Target position when moving
     protected boolean isMoving;
+    protected boolean facingLeft = false;
 
     // Combat
     protected float attackCooldown;
@@ -85,24 +86,37 @@ public abstract class Entity {
     }
 
     /**
+     * Called when entity moves one tile.
+     * Sets MOVING state with a brief timer so animator can play run frames.
+     */
+    public void startMoving() {
+        this.state = EntityState.MOVING;
+        this.moveProgress = 0f;
+        this.isMoving = true;
+    }
+
+    public void setFacingLeft(boolean facingLeft) {
+        this.facingLeft = facingLeft;
+    }
+
+    public boolean isFacingLeft() {
+        return facingLeft;
+    }
+
+    /**
      * Update movement animation
      */
     protected void updateMovement(float deltaTime) {
-        if (!isMoving) {
-            return;
-        }
+        if (!isMoving) return;
 
-        // Calculate distance to move this frame
-        float distance = moveSpeed * deltaTime;
-        moveProgress += distance;
+        moveProgress += moveSpeed * deltaTime;
 
-        // Check if movement is complete (simplified - in real game would use pathfinding)
         if (moveProgress >= 1.0f) {
-            x = targetX;
-            y = targetY;
             isMoving = false;
             moveProgress = 0;
-            state = EntityState.IDLE;
+            if (state == EntityState.MOVING) {
+                state = EntityState.IDLE;
+            }
         }
     }
 
