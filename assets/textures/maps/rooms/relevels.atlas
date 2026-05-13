@@ -1,0 +1,31 @@
+relevels.png
+size:2048,512
+repeat:none
+Base 160x192 1
+bounds:822,46,160,192
+Spawnpoint 160x192
+bounds:822,46,160,192
+Base 160x192 2
+bounds:596,46,224,192
+Boss level
+bounds:2,164,592,320
+Corridor 448x80 1
+bounds:1560,404,448,80
+Corridor 448x80 3
+bounds:1046,242,448,80
+Corridor 448x82 4
+bounds:596,240,448,82
+Corridor 480x160 2
+bounds:1078,324,480,160
+Corridor 480x160 5
+bounds:596,324,480,160
+Corridor 480x160 6
+bounds:2,2,480,160
+Goblin level 2 352x192
+bounds:1560,210,352,192
+Goblin level 1 352x192
+bounds:1560,210,352,192
+Goblin level 3 352x192
+bounds:1560,210,352,192
+Goblin level 4 352x192
+bounds:1560,210,352,192

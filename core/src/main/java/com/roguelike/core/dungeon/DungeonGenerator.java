@@ -11,8 +11,9 @@ public class DungeonGenerator {
     private final Random random;
 
     // Grid dimensions — used only for bounds checking in spawnIfWalkable
-    private static final int WIDTH  = 169; // 5392 / 32 = 168.5 → 169
-    private static final int HEIGHT = 14;  // 416  / 32 = 13    → 14
+    private static final int WIDTH  = WalkableMapBuilder.GRID_WIDTH;   // 166
+    private static final int HEIGHT = WalkableMapBuilder.GRID_HEIGHT;  // 10
+
 
     private final EnemyFactory goblinFactory = new GoblinFactory();
     private final EnemyFactory orcFactory    = new OrcFactory();
@@ -28,21 +29,28 @@ public class DungeonGenerator {
     public DungeonLevel generate(int floorNumber) {
         System.out.println("[DungeonGenerator] Generating floor " + floorNumber);
 
-        // Tile grid — all floor, PNG handles visuals
-        Tile[][] tiles = new Tile[WIDTH][HEIGHT];
-        for (int x = 0; x < WIDTH; x++)
-            for (int y = 0; y < HEIGHT; y++)
-                tiles[x][y] = new Tile(TileType.FLOOR);
+        // 1. Build collision tile grid from relevels.png pixel data
+        WalkableMapBuilder walkableBuilder = new WalkableMapBuilder();
+        Tile[][] tiles = walkableBuilder.build();
 
-        // One big room covering the whole map
+        // 2. Build the RoomLayout list — renderer needs this to draw the PNG rooms
+        FixedDungeonLayout layoutBuilder = new FixedDungeonLayout();
+        List<RoomLayout> roomLayouts = layoutBuilder.build();
+
+        // 3. One room covering the whole walkable map
         List<Room> rooms = new ArrayList<>();
-        rooms.add(new Room(0, 0, WIDTH, HEIGHT));
+        rooms.add(new Room(0, 0, WalkableMapBuilder.GRID_WIDTH, WalkableMapBuilder.GRID_HEIGHT));
 
-        // Spawn enemies across the map
+        // 4. Spawn enemies
         List<Enemy> enemies = spawnEnemiesOnMap(floorNumber, tiles);
 
+        // 5. Build level — MUST call setRoomLayouts so TileRenderer can draw the PNGs
         DungeonLevel level = new DungeonLevel(tiles, rooms, enemies, floorNumber);
+        level.setRoomLayouts(roomLayouts);  // ← this is what makes rooms visible
         level.setExitRoom(rooms.get(0));
+
+        System.out.println("[DungeonGenerator] Floor " + floorNumber + " ready. "
+            + roomLayouts.size() + " rooms, " + enemies.size() + " enemies.");
         return level;
     }
 
