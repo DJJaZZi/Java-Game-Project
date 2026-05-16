@@ -215,7 +215,7 @@ public class SpriteManager {
                         regions.get("player_attack_4"),
                         regions.get("player_attack_5"),
                         regions.get("player_attack_6")
-                    ), 0.06f, false));
+                    ), 0.08f, false));
                 break;
 
             case "goblin":
@@ -238,12 +238,17 @@ public class SpriteManager {
                     new SpriteAnimation(list(
                         regions.get("goblin_attack_1"),
                         regions.get("goblin_attack_2")
-                    ), 0.08f, false));
+                    ), 0.16f, false));
 
                 animator.addAnimation(EntityAnimator.AnimState.DEAD,
                     new SpriteAnimation(list(
-                        regions.get("goblin_dead_1")
-                    ), 0.2f, false));
+                        regions.get("goblin_dead_1"),
+                        regions.get("goblin_dead_2"),
+                        regions.get("goblin_dead_3"),
+                        regions.get("goblin_dead_4"),
+                        regions.get("goblin_dead_5"),
+                        regions.get("goblin_dead_6")
+                    ), 10f, false));
                 break;
 
             case "orc":
