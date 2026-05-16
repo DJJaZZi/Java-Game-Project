@@ -26,7 +26,7 @@ public class RoguelikeGame extends Game {
 
         renderer = new GameRenderer();
         playerController = new PlayerController(gameManager);
-        inputHandler = new InputHandler(gameManager, playerController);
+        inputHandler = new InputHandler(gameManager, playerController, renderer);
 
         gameManager.newGame();
     }

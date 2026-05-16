@@ -28,12 +28,14 @@ public class GameRenderer {
     private final SpriteManager     spriteManager;
     private final UIRenderer        uiRenderer;
     private final TileRenderer      tileRenderer;
+    private final WalkableDebugRenderer walkableDebug;
 
     // ── Animator cache — one EntityAnimator per entity instance ──────────────
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
     // ── Constants ────────────────────────────────────────────────────────────
     private static final float TILE_SIZE = 32f;
+
 
     // ── Constructor ──────────────────────────────────────────────────────────
     public GameRenderer() {
@@ -43,6 +45,7 @@ public class GameRenderer {
         spriteManager = new SpriteManager();
         uiRenderer    = new UIRenderer();
         tileRenderer  = new TileRenderer();
+        walkableDebug = new WalkableDebugRenderer();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -68,11 +71,20 @@ public class GameRenderer {
             renderEntities(gameManager);
         }
 
+        if (level != null) {
+            walkableDebug.render(camera.combined);   // overlay (hidden unless toggled)
+        }
+
+
         // 3. Draw HUD (screen-space, fixed camera)
         batch.setProjectionMatrix(getUIMatrix());
         batch.begin();
         uiRenderer.render(batch, gameManager.getPlayer());
         batch.end();
+    }
+
+    public void toggleWalkableDebug() {
+        walkableDebug.toggle();
     }
 
     public void resize(int width, int height) {
@@ -85,6 +97,7 @@ public class GameRenderer {
         shapeRenderer.dispose();
         spriteManager.dispose();
         tileRenderer.dispose();
+        walkableDebug.dispose();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -132,6 +145,8 @@ public class GameRenderer {
         shapeRenderer.setColor(r, g, b, 1f);
         shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
+
+
 
     // ═════════════════════════════════════════════════════════════════════════
     //  ENTITY RENDERING
