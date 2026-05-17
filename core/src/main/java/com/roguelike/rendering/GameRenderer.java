@@ -27,7 +27,7 @@ public class GameRenderer {
     private final UIRenderer         uiRenderer;
     private final TileRenderer       tileRenderer;
 
-    // ── Animator cache — один EntityAnimator на каждую entity ────────────────
+    // ── Animator cache ────────────────────────────────────────────────────────
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
     // ── Constants ────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ public class GameRenderer {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  PUBLIC — вызывается каждый кадр из RoguelikeGame.render()
+    //  PUBLIC
     // ═════════════════════════════════════════════════════════════════════════
 
     public void render(GameManager gameManager) {
@@ -56,25 +56,17 @@ public class GameRenderer {
 
         DungeonLevel level = gameManager.getCurrentLevel();
 
-        // 1. Рисуем подземелье (PNG комнаты или цветные тайлы)
-        if (level != null) {
-            renderDungeon(level);
-        }
+        // 1. Подземелье
+        if (level != null) renderDungeon(level);
 
-        // 2. Рисуем персонажей (спрайты + полоски HP)
-        if (level != null) {
-            renderEntities(gameManager);
-        }
+        // 2. Существа + полоски HP
+        if (level != null) renderEntities(gameManager);
 
-        // 3. Рисуем HUD (в экранных координатах, без камеры)
-        batch.setProjectionMatrix(getUIMatrix());
-        batch.begin();
-        uiRenderer.render(batch, gameManager.getPlayer());
-        batch.end();
+        // 3. HUD — в экранных координатах
+        renderHUD(gameManager);
     }
 
     public void resize(int width, int height) {
-        // ZOOM: показываем меньший кусок мира → всё выглядит крупнее
         camera.setToOrtho(false, width * ZOOM_FACTOR, height * ZOOM_FACTOR);
         camera.update();
     }
@@ -84,10 +76,11 @@ public class GameRenderer {
         shapeRenderer.dispose();
         spriteManager.dispose();
         tileRenderer.dispose();
+        uiRenderer.dispose();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  DUNGEON RENDERING
+    //  DUNGEON
     // ═════════════════════════════════════════════════════════════════════════
 
     private void renderDungeon(DungeonLevel level) {
@@ -97,7 +90,6 @@ public class GameRenderer {
         if (tileRenderer.isLoaded()) {
             tileRenderer.render(batch);
         } else {
-            // Fallback: цветные тайлы
             batch.end();
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -133,14 +125,11 @@ public class GameRenderer {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  ENTITY RENDERING
+    //  ENTITIES
     // ═════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Рисует спрайты всех существ, затем полоски HP поверх.
-     */
     private void renderEntities(GameManager gameManager) {
-        // ── Спрайты ──────────────────────────────────────────────────────────
+        // Спрайты
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -154,8 +143,7 @@ public class GameRenderer {
 
         for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
             String animKey = "enemy_" + System.identityHashCode(enemy);
-            EntityAnimator anim = getOrCreateAnimator(animKey,
-                enemy.getEnemyType().toLowerCase());
+            EntityAnimator anim = getOrCreateAnimator(animKey, enemy.getEnemyType().toLowerCase());
             syncAnimatorToEntity(anim, enemy);
             anim.update(Gdx.graphics.getDeltaTime());
             drawAnimated(enemy, anim);
@@ -163,13 +151,11 @@ public class GameRenderer {
 
         batch.end();
 
-        // ── Полоски здоровья ─────────────────────────────────────────────────
+        // Полоски HP над головами
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        if (player != null && player.isAlive()) {
-            drawHealthBar(player);
-        }
+        if (player != null && player.isAlive()) drawHealthBar(player);
         for (Enemy e : gameManager.getCurrentLevel().getEnemies()) {
             if (e.isAlive()) drawHealthBar(e);
         }
@@ -199,13 +185,30 @@ public class GameRenderer {
         float barH   = 4f;
         float hpPct  = entity.getHealthPercent() / 100f;
 
-        // Фон (красный)
         shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
         shapeRenderer.rect(worldX, worldY, barW, barH);
-
-        // Заполнение (зелёный)
         shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1f);
         shapeRenderer.rect(worldX, worldY, barW * hpPct, barH);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  HUD — экранные координаты, без игровой камеры
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void renderHUD(GameManager gameManager) {
+        // Переключаемся на экранную матрицу
+        Matrix4 uiMatrix = getUIMatrix();
+        shapeRenderer.setProjectionMatrix(uiMatrix);
+        batch.setProjectionMatrix(uiMatrix);
+
+        // Включаем blending чтобы полупрозрачный фон работал
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        // UIRenderer сам управляет begin/end для обоих рендереров
+        uiRenderer.render(batch, shapeRenderer, gameManager.getPlayer());
+
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -244,7 +247,6 @@ public class GameRenderer {
         if (player != null) {
             float targetX = player.getX() * TILE_SIZE + TILE_SIZE / 2f;
             float targetY = player.getY() * TILE_SIZE + TILE_SIZE / 2f;
-            // Плавное следование за игроком
             camera.position.x += (targetX - camera.position.x) * 0.15f;
             camera.position.y += (targetY - camera.position.y) * 0.15f;
             camera.update();
