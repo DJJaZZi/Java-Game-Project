@@ -231,4 +231,5 @@ public abstract class Entity {
     public int getTargetY() { return targetY; }
 
     public float getMoveProgress() { return moveProgress; }
+
 }

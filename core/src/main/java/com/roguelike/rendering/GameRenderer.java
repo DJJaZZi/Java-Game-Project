@@ -1,6 +1,7 @@
 package com.roguelike.rendering;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -13,42 +14,48 @@ import com.roguelike.core.entities.Entity;
 import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Player;
 import com.roguelike.core.game.GameManager;
+import com.roguelike.core.game.GameStateType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class GameRenderer {
 
-    // ── Core rendering tools ─────────────────────────────────────────────────
+    // ── Рендереры ─────────────────────────────────────────────────────────────
     private final SpriteBatch        batch;
     private final ShapeRenderer      shapeRenderer;
     private final OrthographicCamera camera;
     private final SpriteManager      spriteManager;
     private final UIRenderer         uiRenderer;
     private final TileRenderer       tileRenderer;
+    private final OverlayRenderer    overlayRenderer; // ← НОВЫЙ
 
-    // ── Animator cache ────────────────────────────────────────────────────────
+    // ── Кэш аниматоров ───────────────────────────────────────────────────────
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
-    // ── Constants ────────────────────────────────────────────────────────────
+    // ── Константы ─────────────────────────────────────────────────────────────
     private static final float TILE_SIZE   = 32f;
-    private static final float ZOOM_FACTOR = 0.45f; // меньше = ближе (0.3 – 0.6)
+    private static final float ZOOM_FACTOR = 0.45f;
 
-    // ── Constructor ──────────────────────────────────────────────────────────
     public GameRenderer() {
-        batch         = new SpriteBatch();
-        shapeRenderer = new ShapeRenderer();
-        camera        = new OrthographicCamera();
-        spriteManager = new SpriteManager();
-        uiRenderer    = new UIRenderer();
-        tileRenderer  = new TileRenderer();
+        batch           = new SpriteBatch();
+        shapeRenderer   = new ShapeRenderer();
+        camera          = new OrthographicCamera();
+        spriteManager   = new SpriteManager();
+        uiRenderer      = new UIRenderer();
+        tileRenderer    = new TileRenderer();
+        overlayRenderer = new OverlayRenderer();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  PUBLIC
+    //  ГЛАВНЫЙ МЕТОД — каждый кадр
     // ═════════════════════════════════════════════════════════════════════════
 
     public void render(GameManager gameManager) {
+
+        // ── Клавиши управления оверлеями (R = restart, P = pause/resume) ──────
+        handleGlobalInput(gameManager);
+
         updateCamera(gameManager);
 
         Gdx.gl.glClearColor(0.05f, 0.05f, 0.05f, 1f);
@@ -56,14 +63,22 @@ public class GameRenderer {
 
         DungeonLevel level = gameManager.getCurrentLevel();
 
-        // 1. Подземелье
+        // 1. Подземелье (всегда рисуем фон)
         if (level != null) renderDungeon(level);
 
-        // 2. Существа + полоски HP
-        if (level != null) renderEntities(gameManager);
+        // 2. Существа + полоски HP (только в PLAYING и PAUSE)
+        GameStateType state = gameManager.getGameStateType();
+        if (level != null && (state == GameStateType.PLAYING || state == GameStateType.PAUSE)) {
+            renderEntities(gameManager);
+        }
 
-        // 3. HUD — в экранных координатах
-        renderHUD(gameManager);
+        // 3. HUD (HP + Level) — только пока играем
+        if (state == GameStateType.PLAYING) {
+            renderHUD(gameManager);
+        }
+
+        // 4. Оверлеи (Game Over / Level Complete / Pause)
+        overlayRenderer.render(gameManager);
     }
 
     public void resize(int width, int height) {
@@ -77,10 +92,26 @@ public class GameRenderer {
         spriteManager.dispose();
         tileRenderer.dispose();
         uiRenderer.dispose();
+        overlayRenderer.dispose();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  DUNGEON
+    //  ГЛОБАЛЬНЫЙ ВВОД (R = рестарт, P = пауза)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private boolean rWasDown = false;
+
+    private void handleGlobalInput(GameManager gm) {
+        // R — рестарт в любом состоянии
+        boolean rDown = Gdx.input.isKeyPressed(Input.Keys.R);
+        if (rDown && !rWasDown) {
+            gm.newGame();
+        }
+        rWasDown = rDown;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  ПОДЗЕМЕЛЬЕ
     // ═════════════════════════════════════════════════════════════════════════
 
     private void renderDungeon(DungeonLevel level) {
@@ -125,11 +156,10 @@ public class GameRenderer {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  ENTITIES
+    //  СУЩЕСТВА
     // ═════════════════════════════════════════════════════════════════════════
 
     private void renderEntities(GameManager gameManager) {
-        // Спрайты
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -151,7 +181,7 @@ public class GameRenderer {
 
         batch.end();
 
-        // Полоски HP над головами
+        // Полоски HP
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -192,27 +222,24 @@ public class GameRenderer {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  HUD — экранные координаты, без игровой камеры
+    //  HUD
     // ═════════════════════════════════════════════════════════════════════════
 
     private void renderHUD(GameManager gameManager) {
-        // Переключаемся на экранную матрицу
         Matrix4 uiMatrix = getUIMatrix();
         shapeRenderer.setProjectionMatrix(uiMatrix);
         batch.setProjectionMatrix(uiMatrix);
 
-        // Включаем blending чтобы полупрозрачный фон работал
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
-        // UIRenderer сам управляет begin/end для обоих рендереров
         uiRenderer.render(batch, shapeRenderer, gameManager.getPlayer());
 
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  ANIMATION
+    //  АНИМАЦИЯ
     // ═════════════════════════════════════════════════════════════════════════
 
     private EntityAnimator getOrCreateAnimator(String key, String entityType) {
@@ -239,7 +266,7 @@ public class GameRenderer {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  CAMERA & UTILITIES
+    //  КАМЕРА
     // ═════════════════════════════════════════════════════════════════════════
 
     private void updateCamera(GameManager gameManager) {
