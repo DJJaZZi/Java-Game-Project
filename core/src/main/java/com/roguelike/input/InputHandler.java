@@ -3,16 +3,20 @@ package com.roguelike.input;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.roguelike.core.game.GameManager;
+import com.roguelike.rendering.GameRenderer;
 
 public class InputHandler {
 
     private final PlayerController playerController;
     private final GameManager      gameManager;
+    private final GameRenderer renderer;
+
     private final boolean[]        wasPressed = new boolean[256];
 
-    public InputHandler(GameManager gameManager, PlayerController playerController) {
+    public InputHandler(GameManager gameManager, PlayerController playerController, GameRenderer renderer) {
         this.gameManager      = gameManager;
         this.playerController = playerController;
+        this.renderer = renderer;
     }
 
     public void handleInput() {
@@ -31,6 +35,11 @@ public class InputHandler {
         if (justPressed(Input.Keys.E))     playerController.useItem();
         if (justPressed(Input.Keys.P))     playerController.pause();
         if (justPressed(Input.Keys.TAB))   playerController.nextItem();
+
+        // Debug
+        if (justPressed(Input.Keys.F1)) {
+            renderer.toggleDebug();
+        }
 
         // R — рестарт в любом состоянии ← FIX (раньше было nextItem)
         if (justPressed(Input.Keys.R))     gameManager.newGame();

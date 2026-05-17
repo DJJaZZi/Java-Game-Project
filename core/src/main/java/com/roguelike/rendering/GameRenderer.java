@@ -27,6 +27,7 @@ public class GameRenderer {
     private final UIRenderer         uiRenderer;
     private final TileRenderer       tileRenderer;
     private final OverlayRenderer    overlayRenderer;
+    private final WalkableDebugRenderer walkableDebugRenderer;
 
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
@@ -41,6 +42,7 @@ public class GameRenderer {
         uiRenderer      = new UIRenderer();
         tileRenderer    = new TileRenderer();
         overlayRenderer = new OverlayRenderer();
+        walkableDebugRenderer = new WalkableDebugRenderer();
     }
 
     // ── Главный метод ─────────────────────────────────────────────────────────
@@ -68,6 +70,12 @@ public class GameRenderer {
 
         // 4. Оверлеи (Game Over / Level Complete / Pause)
         overlayRenderer.render(gameManager);
+
+        walkableDebugRenderer.render(camera.combined);
+    }
+
+    public void toggleDebug() {
+        walkableDebugRenderer.toggle();
     }
 
     public void resize(int width, int height) {
@@ -82,6 +90,7 @@ public class GameRenderer {
         tileRenderer.dispose();
         uiRenderer.dispose();
         overlayRenderer.dispose();
+        walkableDebugRenderer.dispose();
     }
 
     // ── Подземелье ────────────────────────────────────────────────────────────
