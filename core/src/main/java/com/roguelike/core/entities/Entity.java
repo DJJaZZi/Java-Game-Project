@@ -1,62 +1,67 @@
 package com.roguelike.core.entities;
 
-import com.badlogic.gdx.math.Vector2;
-
 /**
- * Entity - Abstract base class for all game entities
- * Defines common properties and behavior for Player, Enemy, etc.
+ * Entity — абстрактный базовый класс для всех игровых существ.
  *
- * This class implements:
- * - Position and movement
- * - Health and damage
- * - State machine (Idle, Moving, Attacking, Dead)
- * - Basic update logic
+ * Содержит:
+ * - Позиция и движение по тайловой сетке
+ * - HP, урон, защита
+ * - State machine: IDLE / MOVING / ATTACKING / DEAD
+ * - Cooldown атаки
  */
 public abstract class Entity {
-    protected int x, y;              // Grid position
+
+    // ── Позиция ───────────────────────────────────────────────────────────────
+    protected int x, y;
+    protected int targetX, targetY;
+
+    // ── Здоровье ──────────────────────────────────────────────────────────────
     protected float health;
     protected float maxHealth;
-    protected float defense;         // Damage reduction
+    protected float defense;
+
+    // ── Состояние ─────────────────────────────────────────────────────────────
     protected EntityState state;
     protected boolean isAlive;
     protected String name;
 
-    // Movement
-    protected float moveSpeed;       // Tiles per second
-    protected float moveProgress;    // 0-1 for animation
-    protected int targetX, targetY;  // Target position when moving
+    // ── Движение ──────────────────────────────────────────────────────────────
+    protected float moveSpeed;      // тайлов в секунду
+    protected float moveProgress;   // 0..1 для анимации
     protected boolean isMoving;
     protected boolean facingLeft = false;
 
-    // Combat
+    // ── Бой ───────────────────────────────────────────────────────────────────
     protected float attackCooldown;
     protected float attackCooldownMax;
-    protected int attackDamage;
+    protected int   attackDamage;
 
-    /**
-     * Constructor for Entity
-     */
+    // ── Конструктор ───────────────────────────────────────────────────────────
+
     public Entity(int x, int y, float maxHealth) {
-        this.x = x;
-        this.y = y;
-        this.targetX = x;
-        this.targetY = y;
+        this.x         = x;
+        this.y         = y;
+        this.targetX   = x;
+        this.targetY   = y;
         this.maxHealth = maxHealth;
-        this.health = maxHealth;
-        this.state = EntityState.IDLE;
-        this.isAlive = true;
-        this.isMoving = false;
-        this.moveSpeed = 5.0f; // Tiles per second
-        this.moveProgress = 0;
-        this.attackDamage = 10;
-        this.defense = 0;
-        this.attackCooldown = 0;
-        this.attackCooldownMax = 0.5f; // Half second between attacks
+        this.health    = maxHealth;
+        this.state     = EntityState.IDLE;
+        this.isAlive   = true;
+        this.isMoving  = false;
+        this.moveSpeed = 5.0f;
+        this.moveProgress    = 0f;
+        this.attackDamage    = 10;
+        this.defense         = 0f;
+        this.attackCooldown  = 0f;
+        this.attackCooldownMax = 0.5f;
     }
 
+    // ══════════════════════════════════════════════════════════════
+    //  UPDATE — Template Method
+    // ══════════════════════════════════════════════════════════════
+
     /**
-     * Template Method — defines the update sequence for all entities.
-     * Subclasses override onUpdate() for their specific logic only.
+     * Вызывается каждый кадр. Подклассы переопределяют onUpdate().
      */
     public void update(float deltaTime) {
         if (!isAlive) return;
@@ -65,171 +70,165 @@ public abstract class Entity {
         onUpdate(deltaTime);
     }
 
-    /**
-     * Hook — subclasses put their specific logic here.
-     */
+    /** Hook — подкласс кладёт сюда свою логику. */
     protected abstract void onUpdate(float deltaTime);
 
+    // ══════════════════════════════════════════════════════════════
+    //  ДВИЖЕНИЕ
+    // ══════════════════════════════════════════════════════════════
+
     /**
-     * Move entity towards target grid position
+     * Начать движение к тайлу (newX, newY).
+     * Физическое перемещение выполняет DungeonLevel.moveEntity().
      */
     public void moveTo(int newX, int newY) {
         if (!isMoving && (newX != x || newY != y)) {
-            this.targetX = newX;
-            this.targetY = newY;
-            this.isMoving = true;
-            this.moveProgress = 0;
-            this.state = EntityState.MOVING;
-
-            System.out.println("[Entity] " + name + " moving to (" + newX + ", " + newY + ")");
+            this.targetX     = newX;
+            this.targetY     = newY;
+            this.isMoving    = true;
+            this.moveProgress = 0f;
+            this.state       = EntityState.MOVING;
         }
     }
 
     /**
-     * Called when entity moves one tile.
-     * Sets MOVING state with a brief timer so animator can play run frames.
+     * Вызывается после физического перемещения (GameManager/AISystem).
+     * Включает MOVING-состояние с коротким таймером для анимации.
      */
     public void startMoving() {
-        this.state = EntityState.MOVING;
+        this.state       = EntityState.MOVING;
         this.moveProgress = 0f;
-        this.isMoving = true;
+        this.isMoving    = true;
     }
 
-    public void setFacingLeft(boolean facingLeft) {
-        this.facingLeft = facingLeft;
+    /** Шаг на dx/dy тайлов. */
+    public void move(int dx, int dy) {
+        moveTo(x + dx, y + dy);
     }
 
-    public boolean isFacingLeft() {
-        return facingLeft;
-    }
-
-    /**
-     * Update movement animation
-     */
+    /** Обновляет прогресс анимации движения. */
     protected void updateMovement(float deltaTime) {
         if (!isMoving) return;
 
         moveProgress += moveSpeed * deltaTime;
 
         if (moveProgress >= 1.0f) {
-            isMoving = false;
-            moveProgress = 0;
+            isMoving     = false;
+            moveProgress = 0f;
             if (state == EntityState.MOVING) {
                 state = EntityState.IDLE;
             }
         }
     }
 
-    /**
-     * Simple move (1 tile in direction)
-     */
-    public void move(int dx, int dy) {
-        moveTo(x + dx, y + dy);
-    }
+    // ══════════════════════════════════════════════════════════════
+    //  БОЙ
+    // ══════════════════════════════════════════════════════════════
 
     /**
-     * Take damage
+     * Получить урон. Защита уже учтена в CombatSystem — здесь чистый вычет.
      */
     public void takeDamage(float damage) {
-        health -= damage; // raw damage only — CombatSystem already accounted for defense
-        if (health <= 0) { health = 0; isAlive = false; state = EntityState.DEAD; }
-    }
-
-    /**
-     * Heal entity
-     */
-    public void heal(float amount) {
-        float oldHealth = health;
-        health = Math.min(health + amount, maxHealth);
-
-        if (oldHealth < health) {
-            System.out.println("[Entity] " + name + " healed for " + (health - oldHealth) + " HP!");
+        health -= damage;
+        if (health <= 0) {
+            health  = 0;
+            isAlive = false;
+            state   = EntityState.DEAD;
         }
     }
 
-    /**
-     * Check if entity can attack (cooldown finished)
-     */
+    /** Восстановить HP (не выше maxHealth). */
+    public void heal(float amount) {
+        float before = health;
+        health = Math.min(health + amount, maxHealth);
+        if (health > before) {
+            System.out.println("[Entity] " + name + " healed for " + (health - before) + " HP!");
+        }
+    }
+
+    /** True если cooldown прошёл и можно атаковать. */
     public boolean canAttack() {
         return attackCooldown <= 0;
     }
 
-    /**
-     * Start attack - cooldown begins
-     */
+    /** Начать атаку — включает cooldown и переводит в ATTACKING. */
     public void startAttack() {
         attackCooldown = attackCooldownMax;
-        state = EntityState.ATTACKING;
+        state          = EntityState.ATTACKING;
         System.out.println("[Entity] " + name + " attacking!");
     }
 
-    /**
-     * Update attack cooldown
-     */
+    /** Обновляет таймер cooldown-а; возвращает в IDLE когда истёк. */
     protected void updateAttack(float deltaTime) {
         if (attackCooldown > 0) {
             attackCooldown -= deltaTime;
             if (attackCooldown <= 0) {
-                state = EntityState.IDLE;
+                attackCooldown = 0;
+                if (state == EntityState.ATTACKING) {
+                    state = EntityState.IDLE;
+                }
             }
         }
     }
 
-    /**
-     * Get distance to another entity
-     */
+    // ══════════════════════════════════════════════════════════════
+    //  ВСПОМОГАТЕЛЬНЫЕ
+    // ══════════════════════════════════════════════════════════════
+
+    /** Манхэттенское расстояние до другой сущности. */
     public int getDistance(Entity other) {
-        return Math.abs(x - other.x) + Math.abs(y - other.y); // Manhattan distance
+        return Math.abs(x - other.x) + Math.abs(y - other.y);
     }
 
-    /**
-     * Get health percentage (0-100)
-     */
+    /** HP в процентах (0–100). */
     public float getHealthPercent() {
-        return (health / maxHealth) * 100;
+        return (health / maxHealth) * 100f;
     }
 
-    /**
-     * Check if entity is at full health
-     */
+    /** True если HP == maxHP. */
     public boolean isFullHealth() {
         return health >= maxHealth;
     }
 
-    // ==================== Getters and Setters ====================
+    // ══════════════════════════════════════════════════════════════
+    //  GETTERS / SETTERS
+    // ══════════════════════════════════════════════════════════════
 
     public int getX() { return x; }
     public int getY() { return y; }
+
     public void setPosition(int x, int y) {
-        this.x = x;
-        this.y = y;
+        this.x       = x;
+        this.y       = y;
         this.targetX = x;
         this.targetY = y;
     }
 
-    public float getHealth() { return health; }
-    public float getMaxHealth() { return maxHealth; }
-    public void setMaxHealth(float maxHealth) { this.maxHealth = maxHealth; }
+    public float getHealth()              { return health; }
+    public float getMaxHealth()           { return maxHealth; }
+    public void  setMaxHealth(float v)    { this.maxHealth = v; }
 
-    public EntityState getState() { return state; }
-    public void setState(EntityState newState) { this.state = newState; }
+    public EntityState getState()             { return state; }
+    public void        setState(EntityState s){ this.state = s; }
 
     public boolean isAlive() { return isAlive; }
-    public boolean isDead() { return !isAlive; }
+    public boolean isDead()  { return !isAlive; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getName()         { return name; }
+    public void   setName(String n) { this.name = n; }
 
-    public float getDefense() { return defense; }
-    public void setDefense(float defense) { this.defense = defense; }
+    public float getDefense()          { return defense; }
+    public void  setDefense(float d)   { this.defense = d; }
 
-    public int getAttackDamage() { return attackDamage; }
-    public void setAttackDamage(int damage) { this.attackDamage = damage; }
+    public int  getAttackDamage()       { return attackDamage; }
+    public void setAttackDamage(int d)  { this.attackDamage = d; }
 
-    public boolean isMoving() { return isMoving; }
-    public int getTargetX() { return targetX; }
-    public int getTargetY() { return targetY; }
+    public boolean isMoving()      { return isMoving; }
+    public int     getTargetX()    { return targetX; }
+    public int     getTargetY()    { return targetY; }
+    public float   getMoveProgress(){ return moveProgress; }
 
-    public float getMoveProgress() { return moveProgress; }
-
+    /** Направление спрайта: true = смотрит влево. */
+    public boolean isFacingLeft()          { return facingLeft; }
+    public void    setFacingLeft(boolean v){ this.facingLeft = v; }
 }
