@@ -9,12 +9,12 @@ import com.roguelike.core.entities.Enemy;
 import com.roguelike.core.entities.Entity;
 import com.roguelike.core.entities.EntityState;
 import com.roguelike.core.entities.Player;
-import com.roguelike.core.input.PlayerAction;
 import com.roguelike.core.systems.AISystem;
 import com.roguelike.core.systems.CollisionListener;
 import com.roguelike.core.systems.CollisionSystem;
 import com.roguelike.core.systems.CombatListener;
 import com.roguelike.core.systems.CombatSystem;
+import com.roguelike.input.PlayerAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,12 +23,12 @@ public class GameManager implements CombatListener, CollisionListener {
 
     private static GameManager instance;
 
-    private GameState currentState;
-    private DungeonLevel currentLevel;
-    private Player player;
-    private int currentFloor;
-    private int score;
-    private boolean levelCompleted;
+    private GameState     currentState;
+    private DungeonLevel  currentLevel;
+    private Player        player;
+    private int           currentFloor;
+    private int           score;
+    private boolean       levelCompleted;
 
     private DungeonGenerator dungeonGenerator;
     private CollisionSystem  collisionSystem;
@@ -38,12 +38,13 @@ public class GameManager implements CombatListener, CollisionListener {
     private List<GameStateListener> stateListeners;
     private static final int MAX_FLOORS = 10;
 
+    // ── Singleton ─────────────────────────────────────────────────────────────
     private GameManager() {
-        this.currentFloor  = 1;
-        this.score         = 0;
+        this.currentFloor   = 1;
+        this.score          = 0;
         this.levelCompleted = false;
         this.stateListeners = new ArrayList<>();
-        this.currentState  = new GameOverState();
+        this.currentState   = new GameOverState();
     }
 
     public static synchronized GameManager getInstance() {
@@ -51,28 +52,30 @@ public class GameManager implements CombatListener, CollisionListener {
         return instance;
     }
 
+    // ── Init ──────────────────────────────────────────────────────────────────
     public void init() {
         System.out.println("[GameManager] Initializing...");
         this.dungeonGenerator = new DungeonGenerator();
         this.collisionSystem  = new CollisionSystem();
         this.combatSystem     = new CombatSystem();
-        this.aiSystem         = new AISystem(combatSystem); // ← передаём combatSystem
+        this.aiSystem         = new AISystem(combatSystem); // ← FIX: передаём combatSystem
         this.combatSystem.addListener(this);
         this.collisionSystem.addListener(this);
         System.out.println("[GameManager] All systems initialized!");
     }
 
+    // ── Game flow ─────────────────────────────────────────────────────────────
     public void newGame() {
-        this.currentFloor = 1;
-        this.score = 0;
-        this.player = new Player(10, 10);
+        this.currentFloor   = 1;
+        this.score          = 0;
+        this.player         = new Player(10, 10);
         generateNewLevel();
         setState(new PlayingState());
     }
 
     public void generateNewLevel() {
-        this.currentLevel    = dungeonGenerator.generate(currentFloor);
-        this.levelCompleted  = false;
+        this.currentLevel   = dungeonGenerator.generate(currentFloor);
+        this.levelCompleted = false;
 
         if (currentLevel != null && player != null) {
             int spawnX = 4;
@@ -96,7 +99,6 @@ public class GameManager implements CombatListener, CollisionListener {
         if (currentLevel != null && currentLevel.getEnemies().isEmpty() && !levelCompleted) {
             levelCompleted = true;
             score += 500 + (currentFloor * 100);
-
             if (currentFloor >= MAX_FLOORS) setState(new GameOverState());
             else setState(new LevelCompleteState());
         }
@@ -110,10 +112,17 @@ public class GameManager implements CombatListener, CollisionListener {
         currentState.handleInput(this, action);
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  ДВИЖЕНИЕ ИГРОКА + БЛОКИРОВКА КОРИДОРА
-    // ══════════════════════════════════════════════════════════════
+    public void nextLevel() {
+        if (currentFloor < MAX_FLOORS) {
+            currentFloor++;
+            generateNewLevel();
+            setState(new PlayingState());
+        } else {
+            setState(new GameOverState());
+        }
+    }
 
+    // ── Player movement + corridor lock ──────────────────────────────────────
     public void handlePlayerMove(int dx, int dy) {
         if (player == null || currentLevel == null) return;
 
@@ -134,20 +143,19 @@ public class GameManager implements CombatListener, CollisionListener {
             }
         }
 
-        // ── БЛОКИРОВКА КОРИДОРА ─────────────────────────────────────────────
+        // Блокировка коридора: нельзя уйти из GOBLIN-комнаты пока живы враги
         LevelBounds currentRoom = currentLevel.getBoundsAt(player.getX(), player.getY());
         LevelBounds targetRoom  = currentLevel.getBoundsAt(newX, newY);
 
         if (currentRoom != null && currentRoom != targetRoom) {
-            // Игрок пытается выйти из GOBLIN комнаты — проверяем, все ли мертвы
             if (currentRoom.roomType == RoomType.GOBLIN
                 && !currentLevel.isRoomCleared(currentRoom)) {
-                System.out.println("[GameManager] ⚔ Победи всех врагов в комнате!");
-                return; // ← блокируем движение
+                System.out.println("[GameManager] Победи всех врагов в комнате!");
+                return;
             }
         }
 
-        // ── Обычное движение ───────────────────────────────────────────────
+        // Обычное движение
         player.setState(EntityState.MOVING);
         currentLevel.moveEntity(player, newX, newY);
 
@@ -163,48 +171,29 @@ public class GameManager implements CombatListener, CollisionListener {
             if (tile != null) tile.clearOccupant();
             player.gainExperience(enemy.getXpReward());
             score += enemy.getXpReward() * 10;
-            System.out.println("[GameManager] " + enemy.getName() + " defeated! +" + enemy.getXpReward() + " XP");
+            System.out.println("[GameManager] " + enemy.getName()
+                + " defeated! +" + enemy.getXpReward() + " XP");
         }
     }
 
-    public void nextLevel() {
-        if (currentFloor < MAX_FLOORS) {
-            currentFloor++;
-            generateNewLevel();
-            setState(new PlayingState());
-        } else {
-            setState(new GameOverState());
-        }
-    }
-
+    // ── State ─────────────────────────────────────────────────────────────────
     public void setState(GameState newState) {
         GameStateType oldType = currentState != null ? currentState.getType() : null;
         if (currentState != null) currentState.onExit(this);
         currentState = newState;
         currentState.onEnter(this);
-        for (GameStateListener listener : stateListeners) {
-            listener.onStateChanged(oldType, newState.getType());
-        }
+        for (GameStateListener l : stateListeners) l.onStateChanged(oldType, newState.getType());
     }
 
-    public void onPlayerDeath() {
-        setState(new GameOverState());
-    }
+    public void onPlayerDeath() { setState(new GameOverState()); }
 
-    public void addScore(int points) { this.score += points; }
+    public void addScore(int points)                            { this.score += points; }
+    public void addStateListener(GameStateListener l)           { stateListeners.add(l); }
+    public void removeStateListener(GameStateListener l)        { stateListeners.remove(l); }
 
-    public void addStateListener(GameStateListener listener)    { stateListeners.add(listener); }
-    public void removeStateListener(GameStateListener listener) { stateListeners.remove(listener); }
-
-    // ══════════════════════════════════════════════════════════════
-    //  CombatListener
-    // ══════════════════════════════════════════════════════════════
-
-    @Override
-    public void onPlayerEnemyCollision(Player player, Enemy enemy) {}
-
-    @Override
-    public void onHit(Entity a, Entity d, float dmg) {}
+    // ── CombatListener ────────────────────────────────────────────────────────
+    @Override public void onPlayerEnemyCollision(Player p, Enemy e) {}
+    @Override public void onHit(Entity a, Entity d, float dmg) {}
 
     @Override
     public void onCriticalHit(Entity a, Entity d, float dmg) {
@@ -224,29 +213,26 @@ public class GameManager implements CombatListener, CollisionListener {
                 player.gainExperience(enemy.getExperienceReward());
                 player.addGold(enemy.getGoldReward());
                 addScore(100);
-                System.out.println("[GameManager] " + enemy.getName() + " defeated! +"
-                    + enemy.getExperienceReward() + " XP, +" + enemy.getGoldReward() + " gold");
+                System.out.println("[GameManager] " + enemy.getName()
+                    + " defeated! +" + enemy.getExperienceReward() + " XP");
             }
         } else if (defender instanceof Player) {
-            System.out.println("[GameManager] Player has died! Game Over.");
+            System.out.println("[GameManager] Player died! Game Over.");
             onPlayerDeath();
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  Getters
-    // ══════════════════════════════════════════════════════════════
-
-    public GameStateType getGameStateType()          { return currentState.getType(); }
-    public GameState getCurrentGameState()           { return currentState; }
-    public DungeonLevel getCurrentLevel()            { return currentLevel; }
-    public Player getPlayer()                        { return player; }
-    public int getCurrentFloor()                     { return currentFloor; }
-    public int getScore()                            { return score; }
-    public boolean isLevelCompleted()                { return levelCompleted; }
-    public AISystem getAISystem()                    { return aiSystem; }
-    public CombatSystem getCombatSystem()            { return combatSystem; }
-    public CollisionSystem getCollisionSystem()      { return collisionSystem; }
+    // ── Getters ───────────────────────────────────────────────────────────────
+    public GameStateType getGameStateType()     { return currentState.getType(); }
+    public GameState     getCurrentGameState()  { return currentState; }
+    public DungeonLevel  getCurrentLevel()      { return currentLevel; }
+    public Player        getPlayer()            { return player; }
+    public int           getCurrentFloor()      { return currentFloor; }
+    public int           getScore()             { return score; }
+    public boolean       isLevelCompleted()     { return levelCompleted; }
+    public AISystem      getAISystem()          { return aiSystem; }
+    public CombatSystem  getCombatSystem()      { return combatSystem; }
+    public CollisionSystem getCollisionSystem() { return collisionSystem; }
 
     public void dispose() {
         System.out.println("[GameManager] Disposing...");

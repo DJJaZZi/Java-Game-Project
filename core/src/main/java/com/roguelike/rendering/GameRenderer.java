@@ -1,7 +1,6 @@
 package com.roguelike.rendering;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -21,19 +20,16 @@ import java.util.Map;
 
 public class GameRenderer {
 
-    // ── Рендереры ─────────────────────────────────────────────────────────────
     private final SpriteBatch        batch;
     private final ShapeRenderer      shapeRenderer;
     private final OrthographicCamera camera;
     private final SpriteManager      spriteManager;
     private final UIRenderer         uiRenderer;
     private final TileRenderer       tileRenderer;
-    private final OverlayRenderer    overlayRenderer; // ← НОВЫЙ
+    private final OverlayRenderer    overlayRenderer;
 
-    // ── Кэш аниматоров ───────────────────────────────────────────────────────
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
-    // ── Константы ─────────────────────────────────────────────────────────────
     private static final float TILE_SIZE   = 32f;
     private static final float ZOOM_FACTOR = 0.45f;
 
@@ -47,32 +43,25 @@ public class GameRenderer {
         overlayRenderer = new OverlayRenderer();
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  ГЛАВНЫЙ МЕТОД — каждый кадр
-    // ═════════════════════════════════════════════════════════════════════════
-
+    // ── Главный метод ─────────────────────────────────────────────────────────
     public void render(GameManager gameManager) {
-
-        // ── Клавиши управления оверлеями (R = restart, P = pause/resume) ──────
-        handleGlobalInput(gameManager);
-
         updateCamera(gameManager);
 
         Gdx.gl.glClearColor(0.05f, 0.05f, 0.05f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         DungeonLevel level = gameManager.getCurrentLevel();
+        GameStateType state = gameManager.getGameStateType();
 
-        // 1. Подземелье (всегда рисуем фон)
+        // 1. Подземелье
         if (level != null) renderDungeon(level);
 
-        // 2. Существа + полоски HP (только в PLAYING и PAUSE)
-        GameStateType state = gameManager.getGameStateType();
+        // 2. Существа + HP (во время игры и паузы)
         if (level != null && (state == GameStateType.PLAYING || state == GameStateType.PAUSE)) {
             renderEntities(gameManager);
         }
 
-        // 3. HUD (HP + Level) — только пока играем
+        // 3. HUD (только во время игры)
         if (state == GameStateType.PLAYING) {
             renderHUD(gameManager);
         }
@@ -95,29 +84,10 @@ public class GameRenderer {
         overlayRenderer.dispose();
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  ГЛОБАЛЬНЫЙ ВВОД (R = рестарт, P = пауза)
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private boolean rWasDown = false;
-
-    private void handleGlobalInput(GameManager gm) {
-        // R — рестарт в любом состоянии
-        boolean rDown = Gdx.input.isKeyPressed(Input.Keys.R);
-        if (rDown && !rWasDown) {
-            gm.newGame();
-        }
-        rWasDown = rDown;
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════
-    //  ПОДЗЕМЕЛЬЕ
-    // ═════════════════════════════════════════════════════════════════════════
-
+    // ── Подземелье ────────────────────────────────────────────────────────────
     private void renderDungeon(DungeonLevel level) {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-
         if (tileRenderer.isLoaded()) {
             tileRenderer.render(batch);
         } else {
@@ -128,7 +98,6 @@ public class GameRenderer {
             shapeRenderer.end();
             return;
         }
-
         batch.end();
     }
 
@@ -139,143 +108,112 @@ public class GameRenderer {
                 Tile tile = tiles[x][y];
                 if (tile == null) continue;
                 switch (tile.type) {
-                    case WALL:  drawTileShape(x, y, 0.15f, 0.15f, 0.15f); break;
-                    case FLOOR: drawTileShape(x, y, 0.50f, 0.45f, 0.40f); break;
-                    case DOOR:  drawTileShape(x, y, 0.80f, 0.60f, 0.20f); break;
-                    case TRAP:  drawTileShape(x, y, 1.00f, 0.20f, 0.20f); break;
-                    case CHEST: drawTileShape(x, y, 1.00f, 0.80f, 0.20f); break;
-                    default:    drawTileShape(x, y, 0.30f, 0.30f, 0.30f); break;
+                    case WALL:  drawTile(x, y, 0.15f, 0.15f, 0.15f); break;
+                    case FLOOR: drawTile(x, y, 0.50f, 0.45f, 0.40f); break;
+                    case DOOR:  drawTile(x, y, 0.80f, 0.60f, 0.20f); break;
+                    case CHEST: drawTile(x, y, 1.00f, 0.80f, 0.20f); break;
+                    default:    drawTile(x, y, 0.30f, 0.30f, 0.30f); break;
                 }
             }
         }
     }
 
-    private void drawTileShape(int x, int y, float r, float g, float b) {
+    private void drawTile(int x, int y, float r, float g, float b) {
         shapeRenderer.setColor(r, g, b, 1f);
         shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  СУЩЕСТВА
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private void renderEntities(GameManager gameManager) {
+    // ── Существа ──────────────────────────────────────────────────────────────
+    private void renderEntities(GameManager gm) {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        Player player = gameManager.getPlayer();
+        Player player = gm.getPlayer();
         if (player != null) {
-            EntityAnimator anim = getOrCreateAnimator("player", "player");
-            syncAnimatorToEntity(anim, player);
+            EntityAnimator anim = getOrCreate("player", "player");
+            syncAnim(anim, player);
             anim.update(Gdx.graphics.getDeltaTime());
             drawAnimated(player, anim);
         }
 
-        for (Enemy enemy : gameManager.getCurrentLevel().getEnemies()) {
-            String animKey = "enemy_" + System.identityHashCode(enemy);
-            EntityAnimator anim = getOrCreateAnimator(animKey, enemy.getEnemyType().toLowerCase());
-            syncAnimatorToEntity(anim, enemy);
+        for (Enemy enemy : gm.getCurrentLevel().getEnemies()) {
+            String key = "enemy_" + System.identityHashCode(enemy);
+            EntityAnimator anim = getOrCreate(key, enemy.getEnemyType().toLowerCase());
+            syncAnim(anim, enemy);
             anim.update(Gdx.graphics.getDeltaTime());
             drawAnimated(enemy, anim);
         }
 
         batch.end();
 
-        // Полоски HP
+        // HP полоски
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        if (player != null && player.isAlive()) drawHealthBar(player);
-        for (Enemy e : gameManager.getCurrentLevel().getEnemies()) {
-            if (e.isAlive()) drawHealthBar(e);
+        if (player != null && player.isAlive()) drawHpBar(player);
+        for (Enemy e : gm.getCurrentLevel().getEnemies()) {
+            if (e.isAlive()) drawHpBar(e);
         }
-
         shapeRenderer.end();
     }
 
     private void drawAnimated(Entity entity, EntityAnimator animator) {
         TextureRegion frame = animator.getCurrentFrame();
         if (frame == null) return;
-
-        float worldX = entity.getX() * TILE_SIZE;
-        float worldY = entity.getY() * TILE_SIZE;
-        float scale  = TILE_SIZE / (float) Math.max(frame.getRegionWidth(), frame.getRegionHeight());
-        float drawW  = frame.getRegionWidth()  * scale;
-        float drawH  = frame.getRegionHeight() * scale;
-        float offX   = (TILE_SIZE - drawW) / 2f;
-        float offY   = (TILE_SIZE - drawH) / 2f;
-
-        batch.draw(frame, worldX + offX, worldY + offY, drawW, drawH);
+        float wx    = entity.getX() * TILE_SIZE;
+        float wy    = entity.getY() * TILE_SIZE;
+        float scale = TILE_SIZE / (float) Math.max(frame.getRegionWidth(), frame.getRegionHeight());
+        float dw    = frame.getRegionWidth()  * scale;
+        float dh    = frame.getRegionHeight() * scale;
+        batch.draw(frame, wx + (TILE_SIZE - dw) / 2f, wy + (TILE_SIZE - dh) / 2f, dw, dh);
     }
 
-    private void drawHealthBar(Entity entity) {
-        float worldX = entity.getX() * TILE_SIZE;
-        float worldY = entity.getY() * TILE_SIZE + TILE_SIZE + 2f;
-        float barW   = TILE_SIZE;
-        float barH   = 4f;
-        float hpPct  = entity.getHealthPercent() / 100f;
-
+    private void drawHpBar(Entity entity) {
+        float wx   = entity.getX() * TILE_SIZE;
+        float wy   = entity.getY() * TILE_SIZE + TILE_SIZE + 2f;
+        float pct  = entity.getHealthPercent() / 100f;
         shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
-        shapeRenderer.rect(worldX, worldY, barW, barH);
+        shapeRenderer.rect(wx, wy, TILE_SIZE, 4f);
         shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1f);
-        shapeRenderer.rect(worldX, worldY, barW * hpPct, barH);
+        shapeRenderer.rect(wx, wy, TILE_SIZE * pct, 4f);
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  HUD
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private void renderHUD(GameManager gameManager) {
-        Matrix4 uiMatrix = getUIMatrix();
-        shapeRenderer.setProjectionMatrix(uiMatrix);
-        batch.setProjectionMatrix(uiMatrix);
-
+    // ── HUD ───────────────────────────────────────────────────────────────────
+    private void renderHUD(GameManager gm) {
+        Matrix4 ui = getUIMatrix();
+        shapeRenderer.setProjectionMatrix(ui);
+        batch.setProjectionMatrix(ui);
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        uiRenderer.render(batch, shapeRenderer, gameManager.getPlayer());
-
+        uiRenderer.render(batch, shapeRenderer, gm.getPlayer());
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  АНИМАЦИЯ
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private EntityAnimator getOrCreateAnimator(String key, String entityType) {
-        if (!animatorCache.containsKey(key)) {
-            animatorCache.put(key, spriteManager.buildAnimator(entityType));
-        }
+    // ── Анимация ──────────────────────────────────────────────────────────────
+    private EntityAnimator getOrCreate(String key, String type) {
+        if (!animatorCache.containsKey(key))
+            animatorCache.put(key, spriteManager.buildAnimator(type));
         return animatorCache.get(key);
     }
 
-    private void syncAnimatorToEntity(EntityAnimator animator, Entity entity) {
-        animator.setFacingLeft(entity.isFacingLeft());
-
-        if (!entity.isAlive()) {
-            animator.forceState(EntityAnimator.AnimState.DEAD);
-            return;
-        }
-
+    private void syncAnim(EntityAnimator anim, Entity entity) {
+        anim.setFacingLeft(entity.isFacingLeft());
+        if (!entity.isAlive()) { anim.forceState(EntityAnimator.AnimState.DEAD); return; }
         switch (entity.getState()) {
-            case MOVING:    animator.setState(EntityAnimator.AnimState.RUN);    break;
-            case ATTACKING: animator.setState(EntityAnimator.AnimState.ATTACK); break;
-            case DEAD:      animator.forceState(EntityAnimator.AnimState.DEAD); break;
-            default:        animator.setState(EntityAnimator.AnimState.IDLE);   break;
+            case MOVING:    anim.setState(EntityAnimator.AnimState.RUN);    break;
+            case ATTACKING: anim.setState(EntityAnimator.AnimState.ATTACK); break;
+            case DEAD:      anim.forceState(EntityAnimator.AnimState.DEAD); break;
+            default:        anim.setState(EntityAnimator.AnimState.IDLE);   break;
         }
     }
 
-    // ═════════════════════════════════════════════════════════════════════════
-    //  КАМЕРА
-    // ═════════════════════════════════════════════════════════════════════════
-
-    private void updateCamera(GameManager gameManager) {
-        Player player = gameManager.getPlayer();
+    // ── Камера ────────────────────────────────────────────────────────────────
+    private void updateCamera(GameManager gm) {
+        Player player = gm.getPlayer();
         if (player != null) {
-            float targetX = player.getX() * TILE_SIZE + TILE_SIZE / 2f;
-            float targetY = player.getY() * TILE_SIZE + TILE_SIZE / 2f;
-            camera.position.x += (targetX - camera.position.x) * 0.15f;
-            camera.position.y += (targetY - camera.position.y) * 0.15f;
+            float tx = player.getX() * TILE_SIZE + TILE_SIZE / 2f;
+            float ty = player.getY() * TILE_SIZE + TILE_SIZE / 2f;
+            camera.position.x += (tx - camera.position.x) * 0.15f;
+            camera.position.y += (ty - camera.position.y) * 0.15f;
             camera.update();
         }
     }
