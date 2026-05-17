@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.roguelike.core.dungeon.DungeonLevel;
-import com.roguelike.core.dungeon.RoomLayout;
 import com.roguelike.core.dungeon.Tile;
 import com.roguelike.core.entities.Entity;
 import com.roguelike.core.entities.Enemy;
@@ -16,26 +15,24 @@ import com.roguelike.core.entities.Player;
 import com.roguelike.core.game.GameManager;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class GameRenderer {
 
     // ── Core rendering tools ─────────────────────────────────────────────────
-    private final SpriteBatch       batch;
-    private final ShapeRenderer     shapeRenderer;
+    private final SpriteBatch        batch;
+    private final ShapeRenderer      shapeRenderer;
     private final OrthographicCamera camera;
-    private final SpriteManager     spriteManager;
-    private final UIRenderer        uiRenderer;
-    private final TileRenderer      tileRenderer;
-    private final WalkableDebugRenderer walkableDebug;
+    private final SpriteManager      spriteManager;
+    private final UIRenderer         uiRenderer;
+    private final TileRenderer       tileRenderer;
 
-    // ── Animator cache — one EntityAnimator per entity instance ──────────────
+    // ── Animator cache — один EntityAnimator на каждую entity ────────────────
     private final Map<String, EntityAnimator> animatorCache = new HashMap<>();
 
     // ── Constants ────────────────────────────────────────────────────────────
-    private static final float TILE_SIZE = 32f;
-
+    private static final float TILE_SIZE   = 32f;
+    private static final float ZOOM_FACTOR = 0.45f; // меньше = ближе (0.3 – 0.6)
 
     // ── Constructor ──────────────────────────────────────────────────────────
     public GameRenderer() {
@@ -45,50 +42,40 @@ public class GameRenderer {
         spriteManager = new SpriteManager();
         uiRenderer    = new UIRenderer();
         tileRenderer  = new TileRenderer();
-        walkableDebug = new WalkableDebugRenderer();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    //  PUBLIC — called every frame from RoguelikeGame.render()
+    //  PUBLIC — вызывается каждый кадр из RoguelikeGame.render()
     // ═════════════════════════════════════════════════════════════════════════
 
     public void render(GameManager gameManager) {
         updateCamera(gameManager);
 
-        // Clear screen
         Gdx.gl.glClearColor(0.05f, 0.05f, 0.05f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         DungeonLevel level = gameManager.getCurrentLevel();
 
-        // 1. Draw dungeon (PNG room images or fallback colored tiles)
+        // 1. Рисуем подземелье (PNG комнаты или цветные тайлы)
         if (level != null) {
             renderDungeon(level);
         }
 
-        // 2. Draw entities (sprites + health bars) — manages its own begin/end
+        // 2. Рисуем персонажей (спрайты + полоски HP)
         if (level != null) {
             renderEntities(gameManager);
         }
 
-        if (level != null) {
-            walkableDebug.render(camera.combined);   // overlay (hidden unless toggled)
-        }
-
-
-        // 3. Draw HUD (screen-space, fixed camera)
+        // 3. Рисуем HUD (в экранных координатах, без камеры)
         batch.setProjectionMatrix(getUIMatrix());
         batch.begin();
         uiRenderer.render(batch, gameManager.getPlayer());
         batch.end();
     }
 
-    public void toggleWalkableDebug() {
-        walkableDebug.toggle();
-    }
-
     public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
+        // ZOOM: показываем меньший кусок мира → всё выглядит крупнее
+        camera.setToOrtho(false, width * ZOOM_FACTOR, height * ZOOM_FACTOR);
         camera.update();
     }
 
@@ -97,7 +84,6 @@ public class GameRenderer {
         shapeRenderer.dispose();
         spriteManager.dispose();
         tileRenderer.dispose();
-        walkableDebug.dispose();
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -109,9 +95,9 @@ public class GameRenderer {
         batch.begin();
 
         if (tileRenderer.isLoaded()) {
-            tileRenderer.render(batch); // draw full map PNG
+            tileRenderer.render(batch);
         } else {
-            // Fallback: colored tiles
+            // Fallback: цветные тайлы
             batch.end();
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -146,18 +132,15 @@ public class GameRenderer {
         shapeRenderer.rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
-
-
     // ═════════════════════════════════════════════════════════════════════════
     //  ENTITY RENDERING
     // ═════════════════════════════════════════════════════════════════════════
 
     /**
-     * Draws all entity sprites, then health bars on top.
-     * Fully manages its own SpriteBatch and ShapeRenderer begin/end.
+     * Рисует спрайты всех существ, затем полоски HP поверх.
      */
     private void renderEntities(GameManager gameManager) {
-        // ── Sprites ──────────────────────────────────────────────────────────
+        // ── Спрайты ──────────────────────────────────────────────────────────
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -180,7 +163,7 @@ public class GameRenderer {
 
         batch.end();
 
-        // ── Health bars ───────────────────────────────────────────────────────
+        // ── Полоски здоровья ─────────────────────────────────────────────────
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -216,8 +199,11 @@ public class GameRenderer {
         float barH   = 4f;
         float hpPct  = entity.getHealthPercent() / 100f;
 
+        // Фон (красный)
         shapeRenderer.setColor(0.8f, 0.1f, 0.1f, 1f);
         shapeRenderer.rect(worldX, worldY, barW, barH);
+
+        // Заполнение (зелёный)
         shapeRenderer.setColor(0.1f, 0.9f, 0.1f, 1f);
         shapeRenderer.rect(worldX, worldY, barW * hpPct, barH);
     }
@@ -258,7 +244,7 @@ public class GameRenderer {
         if (player != null) {
             float targetX = player.getX() * TILE_SIZE + TILE_SIZE / 2f;
             float targetY = player.getY() * TILE_SIZE + TILE_SIZE / 2f;
-            // Smooth follow
+            // Плавное следование за игроком
             camera.position.x += (targetX - camera.position.x) * 0.15f;
             camera.position.y += (targetY - camera.position.y) * 0.15f;
             camera.update();
