@@ -2,8 +2,9 @@ package com.roguelike.core.dungeon;
 
 import com.roguelike.core.entities.Entity;
 import com.roguelike.core.entities.Enemy;
-import java.util.List;
+
 import java.util.ArrayList;
+import java.util.List;
 
 public class DungeonLevel {
 
@@ -14,7 +15,10 @@ public class DungeonLevel {
     private int tilesWide;
     private int tilesHigh;
     private Room exitRoom;
-    private List<RoomLayout> roomLayouts = new ArrayList<>(); // ← ADDED
+    private List<RoomLayout> roomLayouts = new ArrayList<>();
+
+    // ← НОВОЕ: список LevelBounds всех комнат (для AI и блокировки коридоров)
+    private List<LevelBounds> levelBounds = new ArrayList<>();
 
     public DungeonLevel(Tile[][] tiles, List<Room> rooms, List<Enemy> enemies, int floorNumber) {
         this.tiles = tiles;
@@ -31,12 +35,41 @@ public class DungeonLevel {
 
     public void update(float deltaTime) {
         for (Enemy enemy : enemies) {
-            if (enemy.isAlive()) {
-                enemy.update(deltaTime);
-            }
+            if (enemy.isAlive()) enemy.update(deltaTime);
         }
         enemies.removeIf(e -> !e.isAlive());
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  НОВЫЕ МЕТОДЫ: работа с комнатами
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Возвращает LevelBounds комнаты, в которой находится тайл (tileX, tileY).
+     * Если тайл вне всех комнат — возвращает null.
+     */
+    public LevelBounds getBoundsAt(int tileX, int tileY) {
+        float px = tileX * 32f + 16f;
+        float py = tileY * 32f + 16f;
+        for (LevelBounds b : levelBounds) {
+            if (b.contains(px, py)) return b;
+        }
+        return null;
+    }
+
+    /**
+     * Возвращает true, если все враги с домашней комнатой = room мертвы.
+     */
+    public boolean isRoomCleared(LevelBounds room) {
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive() && enemy.getHomeBounds() == room) return false;
+        }
+        return true;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  Стандартные методы
+    // ══════════════════════════════════════════════════════════════
 
     public boolean isWalkable(int x, int y) {
         if (x < 0 || x >= tilesWide || y < 0 || y >= tilesHigh) return false;
@@ -62,18 +95,14 @@ public class DungeonLevel {
     }
 
     public Tile getTile(int x, int y) {
-        if (x >= 0 && x < tilesWide && y >= 0 && y < tilesHigh) {
-            return tiles[x][y];
-        }
+        if (x >= 0 && x < tilesWide && y >= 0 && y < tilesHigh) return tiles[x][y];
         return null;
     }
 
     public void placeEntity(Entity entity, int x, int y) {
         if (isWalkable(x, y)) {
             Tile oldTile = getTile(entity.getX(), entity.getY());
-            if (oldTile != null && oldTile.occupant == entity) {
-                oldTile.clearOccupant();
-            }
+            if (oldTile != null && oldTile.occupant == entity) oldTile.clearOccupant();
             tiles[x][y].setOccupant(entity);
             entity.setPosition(x, y);
         } else {
@@ -84,12 +113,9 @@ public class DungeonLevel {
 
     public void moveEntity(Entity entity, int newX, int newY) {
         if (!isFloor(newX, newY)) return;
-
         Tile oldTile = getTile(entity.getX(), entity.getY());
         if (oldTile != null) oldTile.setOccupant(null);
-
         entity.setPosition(newX, newY);
-
         Tile newTile = getTile(newX, newY);
         if (newTile != null) newTile.setOccupant(entity);
     }
@@ -97,9 +123,7 @@ public class DungeonLevel {
     public List<Entity> getEntitiesAt(int x, int y) {
         List<Entity> result = new ArrayList<>();
         Tile tile = getTile(x, y);
-        if (tile != null && tile.occupant != null) {
-            result.add(tile.occupant);
-        }
+        if (tile != null && tile.occupant != null) result.add(tile.occupant);
         return result;
     }
 
@@ -108,37 +132,23 @@ public class DungeonLevel {
         for (Enemy enemy : enemies) {
             int dx = Math.abs(enemy.getX() - centerX);
             int dy = Math.abs(enemy.getY() - centerY);
-            if (dx <= radius && dy <= radius) {
-                result.add(enemy);
-            }
+            if (dx <= radius && dy <= radius) result.add(enemy);
         }
         return result;
     }
 
     public List<int[]> findPath(int startX, int startY, int endX, int endY) {
         List<int[]> path = new ArrayList<>();
-
         int dx = Integer.compare(endX, startX);
         int dy = Integer.compare(endY, startY);
-
         int currentX = startX;
         int currentY = startY;
-
         while ((currentX != endX || currentY != endY) && path.size() < 50) {
-            if (currentX != endX && isFloor(currentX + dx, currentY)) {
-                currentX += dx;
-            } else if (currentY != endY && isFloor(currentX, currentY + dy)) {
-                currentY += dy;
-            } else if (currentX != endX && isFloor(currentX + dx, currentY)) {
-                currentX += dx;
-            } else if (currentY != endY && isFloor(currentX, currentY + dy)) {
-                currentY += dy;
-            } else {
-                break;
-            }
+            if (currentX != endX && isFloor(currentX + dx, currentY)) currentX += dx;
+            else if (currentY != endY && isFloor(currentX, currentY + dy)) currentY += dy;
+            else break;
             path.add(new int[]{currentX, currentY});
         }
-
         return path;
     }
 
@@ -146,9 +156,7 @@ public class DungeonLevel {
         for (int x = 0; x < tilesWide; x++) {
             for (int y = 0; y < tilesHigh; y++) {
                 Tile tile = tiles[x][y];
-                if (tile != null && !tile.explored) {
-                    tile.setExplored(false);
-                }
+                if (tile != null && !tile.explored) tile.setExplored(false);
             }
         }
         for (int x = playerX - visionRange; x <= playerX + visionRange; x++) {
@@ -165,13 +173,13 @@ public class DungeonLevel {
     }
 
     public String getStatistics() {
-        return String.format(
-            "Floor %d: %dx%d tiles | %d rooms | %d enemies",
-            floorNumber, tilesWide, tilesHigh, rooms.size(), enemies.size()
-        );
+        return String.format("Floor %d: %dx%d tiles | %d rooms | %d enemies",
+            floorNumber, tilesWide, tilesHigh, rooms.size(), enemies.size());
     }
 
-    // ==================== Getters & Setters ====================
+    // ══════════════════════════════════════════════════════════════
+    //  Getters / Setters
+    // ══════════════════════════════════════════════════════════════
 
     public Tile[][] getTiles()          { return tiles; }
     public List<Room> getRooms()        { return rooms; }
@@ -182,12 +190,10 @@ public class DungeonLevel {
     public Room getExitRoom()           { return exitRoom; }
     public void setExitRoom(Room room)  { this.exitRoom = room; }
 
-    // ← ADDED — required by DungeonGenerator and GameRenderer
-    public List<RoomLayout> getRoomLayouts() {
-        return roomLayouts;
-    }
+    public List<RoomLayout> getRoomLayouts()            { return roomLayouts; }
+    public void setRoomLayouts(List<RoomLayout> layouts){ this.roomLayouts = layouts; }
 
-    public void setRoomLayouts(List<RoomLayout> layouts) {
-        this.roomLayouts = layouts;
-    }
+    // ← НОВЫЕ геттеры для LevelBounds
+    public List<LevelBounds> getLevelBounds()               { return levelBounds; }
+    public void setLevelBounds(List<LevelBounds> bounds)    { this.levelBounds = bounds; }
 }
